@@ -1,0 +1,440 @@
+{
+  "_rules": {
+    "algorithm": "RFC-0003 D7 Option B: most specific matching rule wins; specificity = level (run>agent>profile>workspace>owner), then qualifiers bound, then matcher tightness (Exact>OneOf>Prefix/Suffix>NumericRange); equal-specificity ties resolve deny>ask>allow; a matching deny at ANY level wins regardless; taint conditions only tighten",
+    "defaults": "RFC-0003 D8: ungranted->deny; granted with no matching rule->ask"
+  },
+  "cases": [
+    {
+      "name": "ungranted-capability-denies",
+      "granted": false,
+      "rules": [],
+      "query": {
+        "scope": {
+          "capability": "crypto",
+          "operation": "trade",
+          "qualifiers": {}
+        },
+        "run_used": []
+      },
+      "expected": {
+        "action": "deny",
+        "winning_rule": "default-deny"
+      }
+    },
+    {
+      "name": "granted-no-rule-defaults-ask",
+      "granted": true,
+      "rules": [],
+      "query": {
+        "scope": {
+          "capability": "email",
+          "operation": "send",
+          "qualifiers": {
+            "to": "x@a.example"
+          }
+        },
+        "run_used": []
+      },
+      "expected": {
+        "action": "ask",
+        "winning_rule": "default-ask"
+      }
+    },
+    {
+      "name": "specific-allow-wins-under-broad-ask",
+      "granted": true,
+      "rules": [
+        {
+          "id": "R1",
+          "level": "owner",
+          "action": "ask",
+          "scope_sel": {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {}
+          }
+        },
+        {
+          "id": "R2",
+          "level": "profile",
+          "action": "allow",
+          "scope_sel": {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {
+              "to": {
+                "kind": "Suffix",
+                "value": "@corp.example"
+              }
+            }
+          }
+        }
+      ],
+      "query": {
+        "scope": {
+          "capability": "email",
+          "operation": "send",
+          "qualifiers": {
+            "to": "alice@corp.example"
+          }
+        },
+        "run_used": []
+      },
+      "expected": {
+        "action": "allow",
+        "winning_rule": "R2"
+      }
+    },
+    {
+      "name": "deny-wins-regardless-of-specificity",
+      "granted": true,
+      "rules": [
+        {
+          "id": "R3",
+          "level": "run",
+          "action": "allow",
+          "scope_sel": {
+            "capability": "fs",
+            "operation": "read",
+            "qualifiers": {
+              "path": {
+                "kind": "Prefix",
+                "value": "/home/o/projects"
+              }
+            }
+          }
+        },
+        {
+          "id": "R4",
+          "level": "owner",
+          "action": "deny",
+          "scope_sel": {
+            "capability": "fs",
+            "operation": "read",
+            "qualifiers": {
+              "path": {
+                "kind": "Prefix",
+                "value": "/home/o/projects/secret"
+              }
+            }
+          }
+        }
+      ],
+      "query": {
+        "scope": {
+          "capability": "fs",
+          "operation": "read",
+          "qualifiers": {
+            "path": "/home/o/projects/secret/x"
+          }
+        },
+        "run_used": []
+      },
+      "expected": {
+        "action": "deny",
+        "winning_rule": "R4"
+      }
+    },
+    {
+      "name": "equal-specificity-tie-ask-beats-allow",
+      "granted": true,
+      "rules": [
+        {
+          "id": "R5",
+          "level": "profile",
+          "action": "ask",
+          "scope_sel": {
+            "capability": "slack",
+            "operation": "post",
+            "qualifiers": {
+              "channel": {
+                "kind": "Exact",
+                "value": "#eng"
+              }
+            }
+          }
+        },
+        {
+          "id": "R6",
+          "level": "profile",
+          "action": "allow",
+          "scope_sel": {
+            "capability": "slack",
+            "operation": "post",
+            "qualifiers": {
+              "channel": {
+                "kind": "Exact",
+                "value": "#eng"
+              }
+            }
+          }
+        }
+      ],
+      "query": {
+        "scope": {
+          "capability": "slack",
+          "operation": "post",
+          "qualifiers": {
+            "channel": "#eng"
+          }
+        },
+        "run_used": []
+      },
+      "expected": {
+        "action": "ask",
+        "winning_rule": "R5"
+      }
+    },
+    {
+      "name": "exact-beats-prefix-at-same-level",
+      "granted": true,
+      "rules": [
+        {
+          "id": "R7",
+          "level": "profile",
+          "action": "ask",
+          "scope_sel": {
+            "capability": "fs",
+            "operation": "read",
+            "qualifiers": {
+              "path": {
+                "kind": "Prefix",
+                "value": "/data"
+              }
+            }
+          }
+        },
+        {
+          "id": "R8",
+          "level": "profile",
+          "action": "allow",
+          "scope_sel": {
+            "capability": "fs",
+            "operation": "read",
+            "qualifiers": {
+              "path": {
+                "kind": "Exact",
+                "value": "/data/report.csv"
+              }
+            }
+          }
+        }
+      ],
+      "query": {
+        "scope": {
+          "capability": "fs",
+          "operation": "read",
+          "qualifiers": {
+            "path": "/data/report.csv"
+          }
+        },
+        "run_used": []
+      },
+      "expected": {
+        "action": "allow",
+        "winning_rule": "R8"
+      }
+    },
+    {
+      "name": "taint-condition-tightens-allow-to-ask",
+      "granted": true,
+      "rules": [
+        {
+          "id": "R9",
+          "level": "profile",
+          "action": "allow",
+          "scope_sel": {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {
+              "to": {
+                "kind": "Suffix",
+                "value": "@corp.example"
+              }
+            }
+          }
+        },
+        {
+          "id": "R10",
+          "level": "owner",
+          "action": "ask",
+          "scope_sel": {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {}
+          },
+          "conditions": [
+            {
+              "if_run_used": {
+                "capability": "vault",
+                "operation": "read"
+              }
+            }
+          ]
+        }
+      ],
+      "query": {
+        "scope": {
+          "capability": "email",
+          "operation": "send",
+          "qualifiers": {
+            "to": "alice@corp.example"
+          }
+        },
+        "run_used": [
+          {
+            "capability": "vault",
+            "operation": "read"
+          }
+        ]
+      },
+      "expected": {
+        "action": "ask",
+        "winning_rule": "R10",
+        "note": "conditions may only tighten (RFC-0003 s7); the conditioned ask overrides the more specific allow"
+      }
+    },
+    {
+      "name": "taint-condition-inert-when-untainted",
+      "granted": true,
+      "rules": [
+        {
+          "id": "R9",
+          "level": "profile",
+          "action": "allow",
+          "scope_sel": {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {
+              "to": {
+                "kind": "Suffix",
+                "value": "@corp.example"
+              }
+            }
+          }
+        },
+        {
+          "id": "R10",
+          "level": "owner",
+          "action": "ask",
+          "scope_sel": {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {}
+          },
+          "conditions": [
+            {
+              "if_run_used": {
+                "capability": "vault",
+                "operation": "read"
+              }
+            }
+          ]
+        }
+      ],
+      "query": {
+        "scope": {
+          "capability": "email",
+          "operation": "send",
+          "qualifiers": {
+            "to": "alice@corp.example"
+          }
+        },
+        "run_used": []
+      },
+      "expected": {
+        "action": "allow",
+        "winning_rule": "R9"
+      }
+    },
+    {
+      "name": "expired-rule-is-absent",
+      "granted": true,
+      "rules": [
+        {
+          "id": "R11",
+          "level": "profile",
+          "action": "allow",
+          "scope_sel": {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {}
+          },
+          "expired": true
+        }
+      ],
+      "query": {
+        "scope": {
+          "capability": "email",
+          "operation": "send",
+          "qualifiers": {
+            "to": "x@a.example"
+          }
+        },
+        "run_used": []
+      },
+      "expected": {
+        "action": "ask",
+        "winning_rule": "default-ask"
+      }
+    },
+    {
+      "name": "multi-scope-effect-any-deny-denies",
+      "granted": true,
+      "effect_level": true,
+      "rules": [
+        {
+          "id": "R12",
+          "level": "owner",
+          "action": "deny",
+          "scope_sel": {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {
+              "domain": {
+                "kind": "Exact",
+                "value": "evil.example"
+              }
+            }
+          }
+        },
+        {
+          "id": "R13",
+          "level": "profile",
+          "action": "allow",
+          "scope_sel": {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {}
+          }
+        }
+      ],
+      "query": {
+        "scopes": [
+          {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {
+              "to": "a@corp.example",
+              "domain": "corp.example"
+            }
+          },
+          {
+            "capability": "email",
+            "operation": "send",
+            "qualifiers": {
+              "to": "b@evil.example",
+              "domain": "evil.example"
+            }
+          }
+        ],
+        "run_used": []
+      },
+      "expected": {
+        "action": "deny",
+        "winning_rule": "R12",
+        "note": "wildcard-derived multi-value scopes: every element must satisfy policy (RFC-0006 s4)"
+      }
+    }
+  ]
+}

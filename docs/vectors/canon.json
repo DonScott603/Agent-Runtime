@@ -1,0 +1,86 @@
+{
+  "_rules": {
+    "serialization": "RFC-0001 D2: JSON, sorted keys, no insignificant whitespace, UTF-8, minimal escaping, integers only (floats are a hard error), strings NFC-normalized before serialization",
+    "hash": "SHA-256 over the UTF-8 bytes of the canonical form, lowercase hex"
+  },
+  "cases": [
+    {
+      "name": "key-sorting",
+      "input": {
+        "b": 2,
+        "a": 1,
+        "A": 0
+      },
+      "canonical": "{\"A\":0,\"a\":1,\"b\":2}",
+      "sha256": "5f05c47104ba1ac24d8cb54dd5f23b15487f4770c9eb767c1c64b64aefba6501"
+    },
+    {
+      "name": "nesting-and-array-order",
+      "input": {
+        "z": [
+          3,
+          1,
+          2
+        ],
+        "a": {
+          "y": true,
+          "x": null
+        }
+      },
+      "canonical": "{\"a\":{\"x\":null,\"y\":true},\"z\":[3,1,2]}",
+      "sha256": "b34ddc7cc6dc5c7cc19db4e3526c205b9b295fa8787094d1eff680e929a5504e"
+    },
+    {
+      "name": "empty-containers",
+      "input": {
+        "arr": [],
+        "obj": {}
+      },
+      "canonical": "{\"arr\":[],\"obj\":{}}",
+      "sha256": "7c557880ceed861401b04be6735c9708e326427e072562fd259da6f6a2612b96"
+    },
+    {
+      "name": "integers-only-int64-range",
+      "input": {
+        "n": 9223372036854775807,
+        "neg": -42,
+        "zero": 0
+      },
+      "canonical": "{\"n\":9223372036854775807,\"neg\":-42,\"zero\":0}",
+      "sha256": "8fdc397624290f89a93e2b2ddc6fba17c9e1206182183be5354381bec47e0ff6"
+    },
+    {
+      "name": "string-escaping",
+      "input": {
+        "s": "quote:\" backslash:\\ newline:\n tab:\t"
+      },
+      "canonical": "{\"s\":\"quote:\\\" backslash:\\\\ newline:\\n tab:\\t\"}",
+      "sha256": "3a52ed82cf907d61c8fae7eda299951875669606e5c3133282eda57ba4ce9b7a"
+    },
+    {
+      "name": "unicode-nfc-normalization",
+      "input": {
+        "s": "café"
+      },
+      "canonical": "{\"s\":\"café\"}",
+      "sha256": "298ebe9dfd0022919780451da01d6ff22cd701ae9f614b77522b751906ac2784"
+    },
+    {
+      "name": "unicode-passthrough",
+      "input": {
+        "s": "日本語 – ✓"
+      },
+      "canonical": "{\"s\":\"日本語 – ✓\"}",
+      "sha256": "0ba13ca93fe9d247662376fd692ddf4b56c28db692f883a82233e09ff155c2d8"
+    },
+    {
+      "name": "money-as-integer-minor-units",
+      "input": {
+        "amount_cents": 12345,
+        "currency": "USD"
+      },
+      "canonical": "{\"amount_cents\":12345,\"currency\":\"USD\"}",
+      "sha256": "96b1eaa84bacddd6c909409ade6af76101a8a5923518e65d434abf2287613d17"
+    }
+  ]
+}

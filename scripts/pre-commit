@@ -1,0 +1,15 @@
+#!/bin/sh
+# git pre-commit: install with  ln -s ../../scripts/pre-commit .git/hooks/pre-commit
+set -e
+STAGED=$(git diff --cached --name-only)
+# 1) corpus purity: crude PII/secret scan on staged corpus + vector files
+echo "$STAGED" | grep -E '^(corpus/|docs/vectors/)' > /dev/null 2>&1 && {
+  git diff --cached -- corpus/ docs/vectors/ | grep -inE 'BEGIN (RSA|EC|OPENSSH) PRIVATE KEY|api[_-]?key|password|@gmail\.com|@outlook\.com' && {
+    echo "pre-commit: possible secret/PII in corpus or vectors — D16 violation. Aborting." >&2; exit 1; } || true
+}
+# 2) frozen contract edits require an ADR in the same commit
+if echo "$STAGED" | grep -E '^docs/rfc-.*\.md$' > /dev/null 2>&1; then
+  echo "$STAGED" | grep -E '^docs/adr/' > /dev/null 2>&1 || {
+    echo "pre-commit: RFC modified without an accompanying ADR. Aborting." >&2; exit 1; }
+fi
+exit 0

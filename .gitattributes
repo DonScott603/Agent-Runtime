@@ -1,0 +1,8 @@
+# Deterministic bytes across platforms. The log, canonical serialization,
+# and golden vectors are hash-ratcheted (versioning.md) - CRLF churn would
+# break every hash and the frozen shell hooks. Normalize everything to LF.
+* text=auto eol=lf
+*.sh        text eol=lf
+scripts/*   text eol=lf
+*.go        text eol=lf
+*.json      text eol=lf

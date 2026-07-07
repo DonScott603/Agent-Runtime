@@ -1,0 +1,158 @@
+{
+  "_rules": {
+    "grammar": "RFC-0006 s4 (D15): dot access, [i], [*] only; at most one transform from {identity, domain_of, suffix, prefix, lowercase_nfc, count, byte_len}; underivable payloads DENY; derived values are data, never patterns"
+  },
+  "cases": [
+    {
+      "name": "wildcard-derives-full-set",
+      "payload": {
+        "input": {
+          "recipients": [
+            "a@corp.example",
+            "b@ext.example"
+          ],
+          "subject": "hi"
+        }
+      },
+      "derivations": [
+        {
+          "qualifier": "to",
+          "path": "input.recipients[*]",
+          "transform": "identity"
+        },
+        {
+          "qualifier": "domain",
+          "path": "input.recipients[*]",
+          "transform": "domain_of"
+        }
+      ],
+      "expected": {
+        "derived": {
+          "to": [
+            "a@corp.example",
+            "b@ext.example"
+          ],
+          "domain": [
+            "corp.example",
+            "ext.example"
+          ]
+        }
+      }
+    },
+    {
+      "name": "missing-path-underivable-denies",
+      "payload": {
+        "input": {
+          "subject": "hi"
+        }
+      },
+      "derivations": [
+        {
+          "qualifier": "to",
+          "path": "input.recipients[*]",
+          "transform": "identity"
+        }
+      ],
+      "expected": {
+        "deny": "underivable"
+      }
+    },
+    {
+      "name": "wrong-type-underivable-denies",
+      "payload": {
+        "input": {
+          "recipients": "not-an-array"
+        }
+      },
+      "derivations": [
+        {
+          "qualifier": "to",
+          "path": "input.recipients[*]",
+          "transform": "identity"
+        }
+      ],
+      "expected": {
+        "deny": "underivable"
+      }
+    },
+    {
+      "name": "hostile-glob-value-is-inert-data",
+      "payload": {
+        "input": {
+          "recipients": [
+            "*@corp.example"
+          ]
+        }
+      },
+      "derivations": [
+        {
+          "qualifier": "to",
+          "path": "input.recipients[*]",
+          "transform": "identity"
+        }
+      ],
+      "expected": {
+        "derived": {
+          "to": [
+            "*@corp.example"
+          ]
+        },
+        "note": "a Suffix('@corp.example') matcher does NOT match this literal value; qualifier values are never interpreted as patterns (RFC-0003 D6)"
+      }
+    },
+    {
+      "name": "count-transform-for-budgets",
+      "payload": {
+        "input": {
+          "attachments": [
+            {
+              "n": 1
+            },
+            {
+              "n": 2
+            },
+            {
+              "n": 3
+            }
+          ]
+        }
+      },
+      "derivations": [
+        {
+          "qualifier": "attachment_count",
+          "path": "input.attachments",
+          "transform": "count"
+        }
+      ],
+      "expected": {
+        "derived": {
+          "attachment_count": [
+            3
+          ]
+        }
+      }
+    },
+    {
+      "name": "indexed-path-and-lowercase",
+      "payload": {
+        "input": {
+          "repo": "OWNER/Repo"
+        }
+      },
+      "derivations": [
+        {
+          "qualifier": "repo",
+          "path": "input.repo",
+          "transform": "lowercase_nfc"
+        }
+      ],
+      "expected": {
+        "derived": {
+          "repo": [
+            "owner/repo"
+          ]
+        }
+      }
+    }
+  ]
+}

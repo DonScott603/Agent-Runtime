@@ -1,0 +1,40 @@
+{
+  "_rules": {
+    "contract": "upcasters are pure vN->vN+1 functions applied at fold time; stored bytes never change (versioning.md M3); readers must-ignore unknown fields"
+  },
+  "cases": [
+    {
+      "name": "additive-field-identity",
+      "type": "msg.appended",
+      "from_version": 1,
+      "to_version": 2,
+      "input": {
+        "message_id": "m1",
+        "role": "user",
+        "blocks": []
+      },
+      "expected": {
+        "message_id": "m1",
+        "role": "user",
+        "blocks": []
+      },
+      "note": "v2 added optional field lang; upcast of a v1 payload is identity"
+    },
+    {
+      "name": "shape-migration",
+      "type": "run.suspended",
+      "from_version": 1,
+      "to_version": 2,
+      "input": {
+        "reason": "awaiting_approval"
+      },
+      "expected": {
+        "reason": {
+          "code": "awaiting_approval",
+          "detail": null
+        }
+      },
+      "note": "illustrative shape migration: string reason becomes an object; the v1 event folds forever via this function"
+    }
+  ]
+}

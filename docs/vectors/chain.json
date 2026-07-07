@@ -1,0 +1,67 @@
+{
+  "_rules": {
+    "zeroing": "event_id is set to the empty string and sig to null before hashing (RFC-0002 s4)",
+    "genesis": "prev_hash of a run's first event is 64 zero hex chars",
+    "event_id": "sha256 of the canonical form of the zeroed envelope"
+  },
+  "events": [
+    {
+      "seq": 1,
+      "run_id": "run_0001",
+      "event_id": "dbcac4b76247a000051c8cc342259e9d02e1955c97363128b83f66774498b83a",
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "ts": 1751780000,
+      "mono": 1,
+      "principal": "owner",
+      "type": "run.created",
+      "type_version": 1,
+      "payload": {
+        "agent": "demo",
+        "profile": "work"
+      },
+      "blobs": [],
+      "sig": null
+    },
+    {
+      "seq": 2,
+      "run_id": "run_0001",
+      "event_id": "fb122b145d6472be91e3159d3cf8546bc59186574d0a55af233beafd54de82a3",
+      "prev_hash": "dbcac4b76247a000051c8cc342259e9d02e1955c97363128b83f66774498b83a",
+      "ts": 1751780001,
+      "mono": 2,
+      "principal": "agent:demo",
+      "type": "msg.appended",
+      "type_version": 1,
+      "payload": {
+        "message_id": "m1",
+        "role": "user",
+        "blocks": [
+          {
+            "id": "b1",
+            "type": "core.text",
+            "body_blob": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ]
+      },
+      "blobs": [
+        "1111111111111111111111111111111111111111111111111111111111111111"
+      ],
+      "sig": null
+    },
+    {
+      "seq": 3,
+      "run_id": "run_0001",
+      "event_id": "9d1be79f3411e7e8288e851ba62c5592f60c08aba137753b19599d0cecb7eff5",
+      "prev_hash": "fb122b145d6472be91e3159d3cf8546bc59186574d0a55af233beafd54de82a3",
+      "ts": 1751780002,
+      "mono": 3,
+      "principal": "agent:demo",
+      "type": "run.completed",
+      "type_version": 1,
+      "payload": {},
+      "blobs": [],
+      "sig": null
+    }
+  ],
+  "expected_head": "9d1be79f3411e7e8288e851ba62c5592f60c08aba137753b19599d0cecb7eff5"
+}
