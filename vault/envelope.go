@@ -40,6 +40,9 @@ func gcmFor(key [keySize]byte) cipher.AEAD {
 // EncodeBlobV1 produces the v1 blob file:
 // 0x01 || nonce(12) || AES-256-GCM ct||tag, AAD = the 1-byte header,
 // so every stored byte that is not ciphertext is AEAD-authenticated.
+// dek and nonce must be fresh random draws for every blob; fixed
+// values appear only in golden-vector tests — a nonce reused under
+// the same key breaks GCM.
 func EncodeBlobV1(dek [keySize]byte, nonce [nonceSize]byte, plaintext []byte) []byte {
 	out := make([]byte, 0, 1+nonceSize+len(plaintext)+tagSize)
 	out = append(out, blobVersion1)
@@ -72,7 +75,9 @@ func BlobAddress(file []byte) kernel.Hash {
 // WrapKey seals key under kek: nonce(12) || ct(32)||tag(16). The AAD
 // binds the wrap to its context — raw run id bytes for run keys, the
 // 64-char hex blob address for DEKs — so envelopes cannot be spliced
-// across runs or entries.
+// across runs or entries. The nonce must be a fresh random draw for
+// every wrap; fixed nonces appear only in golden-vector tests — a
+// nonce reused under the same KEK breaks GCM.
 func WrapKey(kek [keySize]byte, nonce [nonceSize]byte, key [keySize]byte, aad []byte) []byte {
 	out := make([]byte, 0, wrappedSize)
 	out = append(out, nonce[:]...)
