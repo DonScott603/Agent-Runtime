@@ -26,9 +26,9 @@ const vectorsDir = "../docs/vectors"
 var vectorFiles = map[string]string{
 	"canon.json":      "", // asserted below
 	"blob.json":       "", // asserted below
-	"chain.json":      "WP-04: log writer + per-run chains",
-	"resolution.json": "WP-06: gate resolution",
-	"derivation.json": "WP-06: manifest scope derivation",
+	"chain.json":      "WP-04a: seal + chain",
+	"resolution.json": "WP-06a: matchers + resolve",
+	"derivation.json": "WP-06b: derive (manifest scope derivation)",
 	"upcaster.json":   "fold-time payload migration (versioning.md M3/M4)",
 }
 
