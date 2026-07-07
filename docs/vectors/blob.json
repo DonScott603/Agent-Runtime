@@ -1,0 +1,55 @@
+{
+  "_rules": {
+    "format_v1": "blob file = version byte 0x01 || nonce(12) || AES-256-GCM ct||tag; key = per-blob DEK (32 bytes); AAD = the 1-byte header (ADR-0021)",
+    "address": "SHA-256 over the ENTIRE blob file, lowercase hex (RFC-0002 §6 'hash of ciphertext' as pinned by ADR-0021)",
+    "wrap": "wrapped key = nonce(12) || AES-256-GCM ct(32)||tag(16), hex-encoded; run-key wrap: KEK = master key, AAD = raw run id bytes; DEK wrap: KEK = run key, AAD = the 64-char lowercase-hex blob address (ASCII bytes)",
+    "provenance": "expected values computed by an independent implementation (Python cryptography AESGCM) from these rules, never by the code under test; all key material is synthetic patterned bytes"
+  },
+  "cases": [
+    {
+      "name": "blob-v1-empty",
+      "note": "ADR-0021 format v1: empty plaintext is legal; minimum file is 29 bytes",
+      "dek": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "nonce": "a0a1a2a3a4a5a6a7a8a9aaab",
+      "plaintext_hex": "",
+      "file": "01a0a1a2a3a4a5a6a7a8a9aaabaab70c9d092f9006fea72c9c4e4eaff4",
+      "address": "f870ee3c08167cc5d3f34fe35cca6bf7fa90b883e339d7991aaca25aaefd6a47"
+    },
+    {
+      "name": "blob-v1-text",
+      "note": "ADR-0021 format v1: utf-8 text body ('hello, vault'); RFC-0002 §6 address is over ciphertext, never plaintext",
+      "dek": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "nonce": "a0a1a2a3a4a5a6a7a8a9aaab",
+      "plaintext_hex": "68656c6c6f2c207661756c74",
+      "file": "01a0a1a2a3a4a5a6a7a8a9aaab8e7d10412ae722c90310eba78d8d53594688d3fd478abf1d21edbf98",
+      "address": "c57b7ddb11247c16c364d8436b9fbe631e7290499da6d7bcbec77beeaa86b77c"
+    },
+    {
+      "name": "blob-v1-binary",
+      "note": "ADR-0021 format v1: arbitrary binary body including 0x00 and high bytes",
+      "dek": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "nonce": "a0a1a2a3a4a5a6a7a8a9aaab",
+      "plaintext_hex": "00ff10ab407f80fe01",
+      "file": "01a0a1a2a3a4a5a6a7a8a9aaabe6e76c8605b48241637995a9e3dfa9e191e9e1435d3231335c",
+      "address": "d10a29f9702a87ac286beb62022e5846140035d33b457a5fc07064ef60294992"
+    },
+    {
+      "name": "wrap-run-key",
+      "note": "ADR-0021 / RFC-0002 D9: run key wrapped under the master key, AAD = raw run id bytes",
+      "kek": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "nonce": "b0b1b2b3b4b5b6b7b8b9babb",
+      "key": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+      "aad_utf8": "run-vector-01",
+      "wrapped": "b0b1b2b3b4b5b6b7b8b9babb76bb6804d6668e497a4457b14f70d379c662f0c8de1dc266b81df503897a5380e64bf34a4d0f3b8d016679e622acf814"
+    },
+    {
+      "name": "wrap-dek",
+      "note": "ADR-0021 / RFC-0002 D9: per-blob DEK wrapped under the run key, AAD = the blob-v1-text address (64-char hex, ASCII bytes)",
+      "kek": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+      "nonce": "c0c1c2c3c4c5c6c7c8c9cacb",
+      "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "aad_utf8": "c57b7ddb11247c16c364d8436b9fbe631e7290499da6d7bcbec77beeaa86b77c",
+      "wrapped": "c0c1c2c3c4c5c6c7c8c9cacb5f4532cd7e9f3bec7cb02e3da7aeacc28fe44c42ca3b381fe4aa297734676459f2aa3a4435b419657e64b4a15f25367b"
+    }
+  ]
+}
