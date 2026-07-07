@@ -11,7 +11,11 @@
 // no time.Now()/math/rand outside kernel handle implementations.
 package kernel
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"agentruntime/kernel/canon"
+)
 
 // ---------------------------------------------------------------------
 // Identifiers and primitives
@@ -61,12 +65,12 @@ type ContentBlock struct {
 	Body json.RawMessage `json:"body,omitempty"`
 	// Known-type projections; exactly one is populated for core types.
 	// Text bodies live in blobs per D10 (BodyBlob on the wire).
-	BodyBlob   Hash            `json:"body_blob,omitempty"`
-	ToolUseID  string          `json:"tool_use_id,omitempty"`
-	Capability string          `json:"capability,omitempty"`
-	Operation  string          `json:"operation,omitempty"`
-	InputBlob  Hash            `json:"input_blob,omitempty"`
-	OutputBlob Hash            `json:"output_blob,omitempty"`
+	BodyBlob   Hash   `json:"body_blob,omitempty"`
+	ToolUseID  string `json:"tool_use_id,omitempty"`
+	Capability string `json:"capability,omitempty"`
+	Operation  string `json:"operation,omitempty"`
+	InputBlob  Hash   `json:"input_blob,omitempty"`
+	OutputBlob Hash   `json:"output_blob,omitempty"`
 }
 
 type Provenance struct {
@@ -108,7 +112,7 @@ type Event struct {
 }
 
 // Canonical serializes per D2 (see docs/vectors/canon.json _rules).
-func Canonical(v any) ([]byte, error) { panic("WP-01: implement kernel/canon") }
+func Canonical(v any) ([]byte, error) { return canon.Canonical(v) }
 
 // SealEvent computes EventID: zero event_id (empty string) and sig
 // (null), canonicalize, sha256 (docs/vectors/chain.json _rules).
@@ -202,13 +206,13 @@ func Resolve(granted bool, rules []Rule, scope Scope, runUsed []Scope) Decision 
 type Transform string
 
 const (
-	TransformIdentity  Transform = "identity"
-	TransformDomainOf  Transform = "domain_of"
-	TransformSuffix    Transform = "suffix"
-	TransformPrefix    Transform = "prefix"
-	TransformLowerNFC  Transform = "lowercase_nfc"
-	TransformCount     Transform = "count"
-	TransformByteLen   Transform = "byte_len"
+	TransformIdentity Transform = "identity"
+	TransformDomainOf Transform = "domain_of"
+	TransformSuffix   Transform = "suffix"
+	TransformPrefix   Transform = "prefix"
+	TransformLowerNFC Transform = "lowercase_nfc"
+	TransformCount    Transform = "count"
+	TransformByteLen  Transform = "byte_len"
 	// CLOSED SET (D15). Needing more means the operation is too coarse.
 )
 
@@ -250,8 +254,8 @@ func Derive(payload json.RawMessage, op Operation) ([]Scope, error) {
 // Kernel handles (RFC-0004 P2) — the ONLY sources of time and entropy
 // ---------------------------------------------------------------------
 
-type Clock interface{ Now() int64 }         // answers are recorded as clock.read events
-type Entropy interface{ Seed() [32]byte }   // answers are recorded as rng.seed events
+type Clock interface{ Now() int64 }       // answers are recorded as clock.read events
+type Entropy interface{ Seed() [32]byte } // answers are recorded as rng.seed events
 
 // ---------------------------------------------------------------------
 // Pure plugin interfaces (RFC-0004 §4) — signatures may churn until 1.0
