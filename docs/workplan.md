@@ -26,59 +26,82 @@ WP-03  Blob store (vault-lite) — content addressing + per-run keys
   [refs] RFC-0002 §6, D9/D10 · [verify] erasure test: destroy key,
   content unreadable, references intact · [deps] WP-01
 
-WP-04  Log writer + per-run chains (kernel/log)
-  Gapless seq assign-on-commit, SealEvent, per-run prev_hash, anchor
-  event with Merkle root over run heads, crash-safe append (fsync at
-  event boundary).
-  [refs] RFC-0002 §2, §4, D4/D5 · [verify] docs/vectors/chain.json;
-  kill -9 during append recovers to an event boundary, gapless
-  [deps] WP-01
+WP-04a Seal + chain (kernel/log, pure)
+  SealEvent (NormalizeEnvelope first per ADR-0020), per-run prev_hash,
+  chain verify fn.
+  [refs] RFC-0002 §2, §4, D4 · [verify] chain.json asserted in the
+  harness; determinism tests · [deps] WP-01
 
-WP-05  Fold machinery + reducers + snapshots (kernel/fold)
-  Reducer registration, incremental + rebuild folds, snapshot sidecar
-  keyed (reducer hash, schema version, offset), totality (unknown
-  types skipped).
-  [refs] RFC-0002 §7; architecture: reducers · [verify] fold twice,
-  state-hash equal; snapshot invalidation on key mismatch rebuilds
-  [deps] WP-04
+WP-04b Durable append (kernel/log, systems)
+  Gapless assign-on-commit seq, fsync at event boundary, SEQ_GAP
+  refusal, recovery.
+  [refs] RFC-0002 §2, D5 · [verify] kill -9 matrix: recovery to an
+  event boundary, gapless, across before/during/after-append kill
+  points · [deps] WP-04a
 
-WP-06  Gate: matchers, Resolve, Derive (kernel/gate, kernel/derive)
-  The five matchers, Option-B resolution, taint conditions, closed
-  derivation grammar. PURE functions; security-critical path.
-  [refs] RFC-0003 §3–§7; RFC-0006 §4 · [verify] resolution.json +
-  derivation.json all green; property/metamorphic suite (RFC-0003 §9)
-  [deps] WP-01, WP-02 · NOTE: human review required (kernel/gate/CLAUDE.md)
+WP-04c Anchor event (kernel/log)
+  Merkle root over run heads, anchor.appended, export helper.
+  [refs] RFC-0002 §4, D4 · [verify] anchor recomputes from heads;
+  tamper flips it · [deps] WP-04b. May be scheduled any time before
+  the chain-verifier reducer.
+
+WP-05a Fold core (kernel/fold)
+  Reducer registration, incremental + rebuild folds, totality
+  (unknown types skipped).
+  [refs] RFC-0002 §2 (totality); architecture: reducers · [verify]
+  fold twice, state-hash equal; unknown event types pass through
+  [deps] WP-04b
+
+WP-05b Snapshot sidecar (kernel/fold)
+  Keying (reducer hash, schema version, offset), invalidation =
+  rebuild.
+  [refs] RFC-0002 §7 · [verify] key mismatch rebuilds; snapshot
+  deletion is invisible to callers · [deps] WP-05a. May slide after
+  WP-07.
+
+WP-06a Matchers + Resolve (kernel/gate)
+  The five matchers, Option-B resolution, taint conditions. PURE
+  functions; security-critical path.
+  [refs] RFC-0003 §3–§7 · [verify] resolution.json asserted;
+  metamorphic + hostile-value suites (RFC-0003 §9) · [deps] WP-01,
+  WP-02 · NOTE: human review required (kernel/gate/CLAUDE.md)
+
+WP-06b Derive (kernel/derive)
+  Closed derivation grammar. PURE; security-critical path.
+  [refs] RFC-0006 §4 · [verify] derivation.json asserted;
+  path-grammar fuzz · [deps] WP-06a (Scope type shared, nothing
+  else) · NOTE: human review required (kernel/derive/CLAUDE.md)
 
 WP-07  Run state machine (kernel/run)
   States, transition events, suspension reasons, single-writer rule.
   [refs] RFC-0002 §3; architecture: state machine · [verify] property:
   no illegal transition reachable; suspended run resumable from log
-  [deps] WP-05
+  [deps] WP-05a
 
 WP-08  Message schema + invariant validators (kernel/schema)
   Message/ContentBlock (kernel/types.go shapes), validators
   I1–I5 run on append, passthrough helpers for unknown blocks.
   [refs] RFC-0001 §2–§4 · [verify] validator suite over generated
-  corpus; passthrough injection test · [deps] WP-04
+  corpus; passthrough injection test · [deps] WP-04b
 
 WP-09  Kernel handles: Clock/Entropy + ambient-state detector
   Handle implementations recording clock.read / rng.seed; CI detector
   (canary clock + env scan) for plugin code.
   [refs] RFC-0002 §3; RFC-0004 P2, §8.2 · [verify] detector catches a
-  planted time.Now() in a test plugin · [deps] WP-04
+  planted time.Now() in a test plugin · [deps] WP-04b
 
 WP-10  Corpus generator (corpus/gen)
   Seeded scenario -> full synthetic runs; first scenario = the
   annotated trace (docs/trace-annotated.md) reproduced event-for-event
   including its chain head.
   [refs] threat-model D16 · [verify] generated trace-scenario head ==
-  36283240ba955ea1… (docs/trace-annotated.md) · [deps] WP-04, WP-07, WP-08
+  36283240ba955ea1… (docs/trace-annotated.md) · [deps] WP-04b, WP-07, WP-08
 
 WP-11  Playback broker + trust-mode replay (kernel/replay)
   Effect requests answered from record with position+payload matching;
   reconstruction to any offset; fork = borrowed prefix + new run.
   [refs] architecture: replay · [verify] corpus reconstructs; fork at
-  arbitrary offset yields runnable prefix · [deps] WP-05, WP-07, WP-10
+  arbitrary offset yields runnable prefix · [deps] WP-05a, WP-07, WP-10
 
 WP-12  Verify-mode replay + divergence reporting
   Re-execute pure invocations, diff vs record, classify divergence
