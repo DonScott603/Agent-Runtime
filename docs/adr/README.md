@@ -15,8 +15,8 @@
 - ADR-0013 (D13, ACCEPTED): Uncertain-effect default: suspend
 - ADR-0014 (D14, ACCEPTED): Manifests owner-countersigned at install
 - ADR-0015 (D15, ACCEPTED): Derivation grammar: declarative-only, closed
-- ADR-0016 (D16, PROPOSED): Test corpus governance: synthetic-only in CI
-- ADR-0017 (D17, PROPOSED): Stability line: the log is sacred from v0.1
+- ADR-0016 (D16, ACCEPTED): Test corpus governance: synthetic-only in CI
+- ADR-0017 (D17, ACCEPTED): Stability line: the log is sacred from v0.1
 - ADR-0018 (D18, ACCEPTED): License: Apache-2.0
 - ADR-0019 (D19, ACCEPTED): kernel/canon NFC dependency: golang.org/x/text/unicode/norm
 - ADR-0020 (D20, ACCEPTED): Object-key order: UTF-16 code units (RFC 8785 §3.2.3)
