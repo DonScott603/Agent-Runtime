@@ -14,7 +14,7 @@ package kernel
 import (
 	"encoding/json"
 
-	"agentruntime/kernel/canon"
+	"github.com/DonScott603/Agent-Runtime/kernel/canon"
 )
 
 // ---------------------------------------------------------------------

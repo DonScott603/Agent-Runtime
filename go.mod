@@ -1,4 +1,4 @@
-module agentruntime
+module github.com/DonScott603/Agent-Runtime
 
 go 1.26.1
 

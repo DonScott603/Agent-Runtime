@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"agentruntime/kernel"
+	"github.com/DonScott603/Agent-Runtime/kernel"
 )
 
 const vectorsDir = "../docs/vectors"

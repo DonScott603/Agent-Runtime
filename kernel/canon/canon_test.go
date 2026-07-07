@@ -15,8 +15,8 @@ import (
 
 	"pgregory.net/rapid"
 
-	"agentruntime/kernel"
-	"agentruntime/kernel/canon"
+	"github.com/DonScott603/Agent-Runtime/kernel"
+	"github.com/DonScott603/Agent-Runtime/kernel/canon"
 )
 
 // jsonValue generates an arbitrary D2-legal JSON value: null, bool,
