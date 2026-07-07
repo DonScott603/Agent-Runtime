@@ -17,7 +17,9 @@
 - ADR-0015 (D15, ACCEPTED): Derivation grammar: declarative-only, closed
 - ADR-0016 (D16, PROPOSED): Test corpus governance: synthetic-only in CI
 - ADR-0017 (D17, PROPOSED): Stability line: the log is sacred from v0.1
-- ADR-0018 (D18, OPEN): License
+- ADR-0018 (D18, ACCEPTED): License: Apache-2.0
+- ADR-0019 (D19, ACCEPTED): kernel/canon NFC dependency: golang.org/x/text/unicode/norm
+- ADR-0020 (D20, ACCEPTED): Object-key order: UTF-16 code units (RFC 8785 §3.2.3)
 
 Note: chat-era labels D18-D20 were renumbered to D16-D18;
 this register is authoritative.

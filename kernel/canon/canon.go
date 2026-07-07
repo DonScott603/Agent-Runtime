@@ -7,13 +7,13 @@
 // SECURITY-CRITICAL (CLAUDE.md): every hash ever computed depends on
 // these bytes. Keep this file small enough to hand-review in full.
 //
-// Interpretations where D2 defers to JCS (RFC 8785), pending vectors:
-//   - Object keys sort by UTF-16 code units (RFC 8785 §3.2.3), which
-//     matches the roadmap E5 cross-check against an independent JCS
-//     implementation. Byte order and UTF-16 order agree on ASCII.
+// Interpretations where D2 defers to JCS (RFC 8785):
+//   - Object keys sort by UTF-16 code units (RFC 8785 §3.2.3) —
+//     RESOLVED by ADR-0020 and pinned by the key-order-utf16-astral
+//     golden case. Byte order and UTF-16 order agree on ASCII.
 //   - Minimal escaping per RFC 8785 §3.2.2.2: \" \\ \b \f \n \r \t,
 //     other control chars as \u00xx lowercase hex, everything else
-//     literal UTF-8.
+//     literal UTF-8 (partially vector-pinned; fuller cases pending).
 //
 // Deliberate deviations from JCS, mandated by D2:
 //   - Numbers are integers only (int64/uint64 range); any float-typed

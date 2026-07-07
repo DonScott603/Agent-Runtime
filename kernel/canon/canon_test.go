@@ -162,7 +162,8 @@ func TestUint64Range(t *testing.T) {
 
 // Object keys sort by UTF-16 code units (RFC 8785 §3.2.3): U+10000
 // (surrogate pair D800 DC00) sorts before U+FF61, though byte order
-// says otherwise. Interpretation flagged for /vector-add.
+// says otherwise. Pinned by ADR-0020 and the canon.json
+// key-order-utf16-astral golden case.
 func TestKeyOrderUTF16(t *testing.T) {
 	got, err := canon.Canonical(map[string]any{"｡": 1, "\U00010000": 2})
 	if err != nil {

@@ -114,8 +114,10 @@ type Event struct {
 // Canonical serializes per D2 (see docs/vectors/canon.json _rules).
 func Canonical(v any) ([]byte, error) { return canon.Canonical(v) }
 
-// SealEvent computes EventID: zero event_id (empty string) and sig
-// (null), canonicalize, sha256 (docs/vectors/chain.json _rules).
+// SealEvent computes EventID: normalize the envelope first
+// (NormalizeEnvelope — one logical event, one byte form), then zero
+// event_id (empty string) and sig (null), canonicalize, sha256
+// (docs/vectors/chain.json _rules).
 func SealEvent(e Event) (Event, error) { panic("WP-04: implement log writer") }
 
 // ---------------------------------------------------------------------

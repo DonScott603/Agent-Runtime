@@ -37,4 +37,4 @@ sessions becomes refactoring debt; use these names and no others.
 | Uncertain window | executed-without-result crash gap | `effect.uncertain` |
 
 Naming rules: event types are `<domain>.<name>` lowercase; JSON keys
-are snake_case; Go exported identifiers per stubs/kernel/types.go.
+are snake_case; Go exported identifiers per kernel/types.go.

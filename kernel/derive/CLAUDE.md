@@ -3,7 +3,7 @@
 SECURITY-CRITICAL (runs inside the gate's trust boundary).
 
 - The grammar is CLOSED (D15): dot access, [i], [*]; at most one
-  transform from the seven in stubs/kernel/types.go. No regex, no
+  transform from the seven in kernel/types.go. No regex, no
   expression language, no "just this one helper".
 - Underivable => DENY. Never guess, never default, never coerce types.
 - Derived values are data. If a derived value is ever interpreted as

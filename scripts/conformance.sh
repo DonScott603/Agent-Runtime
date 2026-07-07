@@ -23,7 +23,7 @@ if go test ./...; then echo "suites: green"; else fail=1; fi
 
 echo "== fold ratchet =="
 # Generation 0 freezes with the corpus generator (WP-10/WP-17).
-echo "ratchet: SKIP — no frozen corpora yet (lands WP-10/WP-17)"
+echo "ratchet: PENDING — no frozen corpora yet (lands WP-10/WP-17)"
 
 echo "== secret/PII scan (threat-model D16) =="
 if grep -rinE 'BEGIN (RSA|EC|OPENSSH) PRIVATE KEY|api[_-]?key|password|@gmail\.com|@outlook\.com' corpus/ docs/vectors/; then

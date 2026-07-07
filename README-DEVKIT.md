@@ -7,7 +7,7 @@ Merge into the repo root as-is; paths are final:
   docs/workplan.md        Stage-1 packages WP-01..WP-17
   docs/glossary.md        naming map (concept -> Go identifier)
   docs/errors.md          error taxonomy (S4-frozen wire codes)
-  stubs/kernel/types.go   types-first commit -> move to kernel/ in WP-01
+  stubs/kernel/types.go   types-first commit -> moved to kernel/types.go (WP-01, done)
   kernel/*/CLAUDE.md      path-local law (loaded on entry to each dir)
   broker/CLAUDE.md, vault/CLAUDE.md, corpus/CLAUDE.md    same
   .claude/settings.json   PreToolUse frozen-path guard

@@ -17,3 +17,10 @@ explicit human sign-off in the PR description (see /vector-add skill).
 The PreToolUse guard blocks silent edits. Adding NEW cases is encouraged -
 extend coverage whenever implementation reveals an ambiguity these cases
 do not settle.
+
+WARNING (ADR-0020): the script originally used to generate these vectors
+sorted object keys by code point, which diverges from the normative
+UTF-16 code-unit order (RFC 8785 s3.2.3) for keys outside the Basic
+Multilingual Plane. Do not use it as a reference for cases with
+non-ASCII keys; canon.json "key-order-utf16-astral" is the normative
+example of the difference.

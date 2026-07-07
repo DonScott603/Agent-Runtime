@@ -1,6 +1,6 @@
 {
   "_rules": {
-    "serialization": "RFC-0001 D2: JSON, sorted keys, no insignificant whitespace, UTF-8, minimal escaping, integers only (floats are a hard error), strings NFC-normalized before serialization",
+    "serialization": "RFC-0001 D2: JSON, sorted keys (UTF-16 code-unit order, RFC 8785 §3.2.3; ADR-0020), no insignificant whitespace, UTF-8, minimal escaping, integers only (floats are a hard error), strings NFC-normalized before serialization",
     "hash": "SHA-256 over the UTF-8 bytes of the canonical form, lowercase hex"
   },
   "cases": [
@@ -81,6 +81,16 @@
       },
       "canonical": "{\"amount_cents\":12345,\"currency\":\"USD\"}",
       "sha256": "96b1eaa84bacddd6c909409ade6af76101a8a5923518e65d434abf2287613d17"
+    },
+    {
+      "name": "key-order-utf16-astral",
+      "note": "ADR-0020: keys sort by UTF-16 code units (RFC 8785 §3.2.3). U+10000 encodes as surrogate pair D800 DC00 and sorts before U+FF61; code-point/byte order would say otherwise.",
+      "input": {
+        "｡": 1,
+        "𐀀": 2
+      },
+      "canonical": "{\"𐀀\":2,\"｡\":1}",
+      "sha256": "008299302d4285e1ad392de6286154793c97714e131e22778355d21073453feb"
     }
   ]
 }

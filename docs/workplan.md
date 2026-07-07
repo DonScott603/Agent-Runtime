@@ -56,7 +56,7 @@ WP-07  Run state machine (kernel/run)
   [deps] WP-05
 
 WP-08  Message schema + invariant validators (kernel/schema)
-  Message/ContentBlock (stubs/kernel/types.go shapes), validators
+  Message/ContentBlock (kernel/types.go shapes), validators
   I1–I5 run on append, passthrough helpers for unknown blocks.
   [refs] RFC-0001 §2–§4 · [verify] validator suite over generated
   corpus; passthrough injection test · [deps] WP-04
