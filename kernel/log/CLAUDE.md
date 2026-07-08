@@ -1,9 +1,11 @@
 # kernel/log — local law
 
 The log is append-only and sacred (constitution #4); from WP-04b on,
-this package owns that property. It is not on the repo's human-review
-list, but seal + chain is the tamper-evidence primitive — treat
-changes with the same care.
+this package owns that property. store.go and recover.go are on the
+repo's security-critical review list (root CLAUDE.md, threat-model.md
+§8 O1; added WP-04b.1) — human review required on every change. The
+pure seal/chain layer is not on that list, but it is the
+tamper-evidence primitive — treat changes with the same care.
 
 - Seal/chain rules are frozen by docs/vectors/chain.json _rules and
   RFC-0002 §4: NormalizeEnvelope before hashing (ADR-0020), zero

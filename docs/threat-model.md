@@ -122,8 +122,10 @@ document is the tiebreaker.
 ## 8. Standing obligations
 
   O1  Security-critical directories (gate, broker, vault, derivation,
-      canonical serialization) require human review on every change;
-      keep them small enough that full review is feasible (CLAUDE.md).
+      canonical serialization, and kernel/log's durable store +
+      recovery — store.go, recover.go, as of WP-04b) require human
+      review on every change; keep them small enough that full review
+      is feasible (CLAUDE.md).
   O2  The conformance suites of RFC-0001..0006 §9/§10 run in CI and
       are release-blocking.
   O3  Escape smoke tests (RFC-0005 §10.3) run per platform per release.

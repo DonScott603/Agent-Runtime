@@ -35,6 +35,9 @@ append-only event log.
   kernel/gate/        policy resolution, scope matching
   kernel/derive/      manifest scope derivation
   kernel/canon/       canonical serialization + hashing
+  kernel/log/         durable append + recovery; owns the append-only
+  (store.go,          property
+   recover.go)
   broker/             worker launch, isolation, credential binding
   vault/              key handling, signing
 

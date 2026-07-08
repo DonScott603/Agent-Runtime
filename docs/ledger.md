@@ -3,7 +3,7 @@
 Operational state between sessions. Updated at every session closeout
 (see process.md §8). Prune freely; this file is not frozen.
 
-Snapshot: 2026-07-07, WP-04b closed out.
+Snapshot: 2026-07-08, WP-04b.1 closed out.
 
 ## Completed
 
@@ -86,9 +86,21 @@ Snapshot: 2026-07-07, WP-04b closed out.
           assertion need it); mid-file CRC flip classifies as C3 not
           C2 (same refusal behavior, taxonomy label only).
 
+  WP-04b.1 interstitial — ADR-0022 flipped ACCEPTED (owner,
+          2026-07-08; implementation review confirmed the fault
+          matrix faithful to the taxonomy, C3 reading of mid-file CRC
+          anomalies correct) + the owner-approved taxonomy
+          clarification sentence; kernel/log store.go/recover.go
+          added to the security-critical list (root CLAUDE.md,
+          threat-model §8 O1, local law reconciled) — as of WP-04b
+          the package physically owns constitution #4, and recovery
+          truncation is the one place committed events could die by
+          code. errors.md LOG_CORRUPT row verified verbatim against
+          the ADR (no edit). Doc-only; conformance GREEN.
+
 ## In flight
 
-  Nothing. Next session launches WP-04c or 05a.
+  Nothing. Next session launches WP-05a.
 
 ## Owner action items
 
@@ -104,28 +116,25 @@ Snapshot: 2026-07-07, WP-04b closed out.
       toolchain go1.26.1 → 15.0.0 tables active. No ADR edit needed.
   [x] /vector-add candidates from WP-04a: all three accepted by the
       owner and landed as additive chain.json cases (WP-04a.1).
-  [ ] ADR-0022 (durable append: layout, torn-tail recovery, per-
-      platform durability) is PROPOSED — owner to accept or amend on
-      review of the WP-04b implementation, per the plan-approval
-      ruling. The errors.md LOG_CORRUPT row lands with it and reverts
-      with it. Plan-approval rulings recorded in the ADR: any-base
-      recovery contingent on A1 (WP-04c anchors per-container base
-      seq + first event_id); accepted-unacked with the "at least every
-      acknowledged append" guarantee sentence; owner-scope "" chain.
+  [x] ADR-0022 ACCEPTED (owner, 2026-07-08, WP-04b.1) after
+      implementation review. Register now 22/22 ACCEPTED, zero
+      pending. The A1 attestation requirement on WP-04c stands in the
+      ADR's Consequences.
 
 ## Next up
 
-  WP-04c (anchor) any time before the chain-verifier reducer; then
-  05a (fold). NOTE for 04c: ADR-0022 places a REQUIREMENT on it (owner
-  A1) — the anchor attests, per container, the base seq and first
-  event_id alongside run heads; the any-base recovery rule is accepted
-  only because anchoring closes front-truncation.
+  WP-05a (fold), then WP-04c (anchor; must land before the
+  chain-verifier reducer). NOTE for 04c: it inherits the A1
+  attestation requirement stated in ADR-0022 Consequences — the
+  anchor attests, per container, the base seq and first event_id
+  alongside run heads; the any-base recovery rule is accepted only
+  because anchoring closes front-truncation.
 
 ## Standing context for a new assistant
 
   Read in order: docs/architecture.md → docs/process.md → this ledger
   → docs/workplan.md. The RFCs are contracts (win on conflict);
   threat-model.md is the security tiebreaker; ADR register is
-  docs/adr/README.md (D1–D21 resolved except any listed above).
+  docs/adr/README.md (D1–D22, all ACCEPTED, zero pending).
   The owner's review method is process.md §6; the golden-file rituals
   §5 are the most load-bearing habits — hold them.
