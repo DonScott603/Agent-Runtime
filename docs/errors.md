@@ -18,7 +18,7 @@ via ADR. Wire form inside payloads:
 | UNSUPPORTED_BLOCK | adapter | effect.result error | continues; routing may pick another adapter | fail-closed (D3); downgrade path records transform id |
 | VAULT_SLOT_UNBOUND | broker | run.suspended(awaiting_input) + owner card | suspends | never a cryptic failure (RFC-0006 §5) |
 | BUDGET_EXCEEDED | gate (NumericRange) | gate.decision(ask or deny) | per policy | spend scopes on model.call |
-| PLUGIN_CONTRACT | kernel | run.failed(diagnostics) | terminal | pure-plugin panic or ambient-state breach (RFC-0004 P3) |
+| PLUGIN_CONTRACT | kernel | run.failed(diagnostics) | terminal | pure-plugin panic or ambient-state breach (RFC-0004 P3); on the read path (reducers), the view becomes unavailable instead — there is no run to fail; live-path wiring to run.failed is WP-07+ |
 | PLUGIN_ERROR | plugin | plugin.invoked output error value | per caller | deterministic error VALUE, not a panic |
 | WORKER_LIMIT | broker | effect.result error | continues | rlimit breach; isolation descriptor names the limit |
 | CHAIN_BROKEN | verifier reducer | integrity alarm (owner notification) | none (read path) | tamper-evidence tripwire; never auto-"repair" |

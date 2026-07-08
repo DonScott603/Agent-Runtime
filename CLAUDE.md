@@ -56,9 +56,10 @@ every diff here as needs-human-review in the PR description.
   say so.
 - Every pure component ships with its determinism test (invoke twice,
   byte-compare) in the same commit.
-- Run before declaring done: `make conformance` (suites + corpus
-  ratchet + secret scan). A red ratchet means the change breaks the
-  past — stop and propose, don't force.
+- Run before declaring done: `make conformance` (or
+  `sh scripts/conformance.sh` where make is not on PATH — identical
+  gate; suites + corpus ratchet + secret scan). A red ratchet means
+  the change breaks the past — stop and propose, don't force.
 - Corpus files are synthetic-only (threat-model.md D16). Never commit
   anything derived from a real run.
 - New decision needed mid-task? Draft docs/adr/ADR-XXXX with options

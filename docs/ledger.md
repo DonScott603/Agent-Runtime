@@ -3,7 +3,7 @@
 Operational state between sessions. Updated at every session closeout
 (see process.md §8). Prune freely; this file is not frozen.
 
-Snapshot: 2026-07-08, WP-05a closed out.
+Snapshot: 2026-07-08, WP-05a.1 closed out.
 
 ## Completed
 
@@ -147,6 +147,17 @@ Snapshot: 2026-07-08, WP-05a closed out.
           RFC-0002 §5 sig validation deferred with the seam reserved
           in kernel/fold/upcast.go.
 
+  WP-05a.1 interstitial — ADR-0023 flipped ACCEPTED (owner,
+          2026-07-08; implementation review confirmed the
+          IdentityHash preimage matches the independently derived
+          goldens) + ruling propagation to target files: errors.md
+          PLUGIN_CONTRACT read-path note, workplan WP-04c
+          anchor-verify obligation (chainverify extension + ADR-0023
+          semver bump), root CLAUDE.md conformance fallback
+          (`sh scripts/conformance.sh` where make is absent),
+          process.md §4 paste-back sentence. Doc-only; conformance
+          GREEN.
+
 ## In flight
 
   Nothing. Next session launches WP-04c.
@@ -168,10 +179,10 @@ Snapshot: 2026-07-08, WP-05a closed out.
   [x] ADR-0022 ACCEPTED (owner, 2026-07-08, WP-04b.1) after
       implementation review. The A1 attestation requirement on WP-04c
       stands in the ADR's Consequences.
-  [ ] ADR-0023 (reducer identity) formal acceptance at the WP-05a
-      implementation review — recommendation (a) already endorsed at
-      plan approval (owner, 2026-07-08); flip the status line after
-      the human read (process.md §6 pass 3).
+  [x] ADR-0023 ACCEPTED (owner, 2026-07-08, WP-05a.1) after
+      implementation review confirmed the IdentityHash preimage
+      against the independently derived goldens. Register now 23/23
+      ACCEPTED, zero pending.
 
 ## Next up
 
@@ -190,7 +201,6 @@ Snapshot: 2026-07-08, WP-05a closed out.
   Read in order: docs/architecture.md → docs/process.md → this ledger
   → docs/workplan.md. The RFCs are contracts (win on conflict);
   threat-model.md is the security tiebreaker; ADR register is
-  docs/adr/README.md (D1–D22 ACCEPTED; D23 PROPOSED, acceptance
-  queued on the WP-05a implementation review).
+  docs/adr/README.md (D1–D23, all ACCEPTED, zero pending).
   The owner's review method is process.md §6; the golden-file rituals
   §5 are the most load-bearing habits — hold them.

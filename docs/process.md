@@ -64,6 +64,8 @@ existing goes red, stop and report."
 When a session presents a plan: approve with amendments rather than
 re-planning. Classify each amendment BLOCKING or non-blocking; put the
 verbatim paste-back block at the end so approval is one copy-paste.
+Rulings that target specific files travel only in paste-back blocks;
+prose rulings reach ledgers but miss their target files.
 Historical hit-rate note: plans have been strong; the recurring
 blocking finding is self-certification of goldens (see §5) — check
 for it every time a plan creates vectors.
