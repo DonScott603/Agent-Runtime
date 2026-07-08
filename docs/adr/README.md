@@ -21,6 +21,7 @@
 - ADR-0019 (D19, ACCEPTED): kernel/canon NFC dependency: golang.org/x/text/unicode/norm
 - ADR-0020 (D20, ACCEPTED): Object-key order: UTF-16 code units (RFC 8785 §3.2.3)
 - ADR-0021 (D21, ACCEPTED): Vault-lite blob format and key hierarchy (AES-256-GCM, DEK/KEK/master)
+- ADR-0022 (D22, PROPOSED): Durable append: single-file log, WAL-truncate torn tails, per-platform durability
 
 Note: chat-era labels D18-D20 were renumbered to D16-D18;
 this register is authoritative.

@@ -25,6 +25,7 @@ via ADR. Wire form inside payloads:
 | SIG_INVALID | fold | consent event treated as absent + alarm | as if unsigned | RFC-0002 §5 |
 | SCHEMA_UNKNOWN_VERSION | fold | fold error surfaced to owner | view unavailable | missing upcaster == release-blocking bug |
 | SEQ_GAP | log recovery | refuses to open store + alarm | none | should be impossible (D5 gapless); treat as corruption |
+| LOG_CORRUPT | log recovery | refuses to open store + alarm | none | framing/CRC/content corruption of committed bytes; torn tails (ADR-0022) are truncated, never corruption |
 
 Rules: DENIED-family errors are NORMAL control flow fed back to the
 agent — never terminal. PLUGIN_CONTRACT and SEQ_GAP are bugs — always

@@ -1,11 +1,13 @@
-// Package log implements the pure seal/chain layer of the event log
-// (WP-04a; RFC-0002 §2, §4, D4): per-run prev_hash threading and the
-// chain verifier. Sealing itself is kernel.SealEvent (kernel/seal.go),
-// which lives beside the Event type to keep the types.go delegation
-// acyclic; this package builds on it.
+// Package log implements the event log: the pure seal/chain layer
+// (WP-04a; RFC-0002 §2, §4, D4 — per-run prev_hash threading and the
+// chain verifier, this file) and the durable single-writer store
+// (WP-04b; D5, ADR-0022 — seq assignment, persistence, fsync,
+// recovery; store.go). Sealing itself is kernel.SealEvent
+// (kernel/seal.go), which lives beside the Event type to keep the
+// types.go delegation acyclic; this package builds on it.
 //
-// Nothing here touches disk: seq assignment, persistence, fsync and
-// recovery are WP-04b.
+// Nothing in this file touches disk; the pure layer never imports os
+// (local law, CLAUDE.md).
 package log
 
 import (
@@ -17,6 +19,9 @@ import (
 // ChainBrokenError reports the FIRST broken position in a run's chain
 // (docs/errors.md CHAIN_BROKEN). It is a tamper-evidence tripwire:
 // report, never repair. Every VerifyChain failure is of this type.
+// Fields describe the event at the broken position — its seq, its
+// run_id (in uniformity failures the run_id is the divergent event's,
+// not the chain base's).
 type ChainBrokenError struct {
 	RunID  kernel.RunID
 	Seq    kernel.Seq

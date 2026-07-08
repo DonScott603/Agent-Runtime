@@ -3,7 +3,7 @@
 Operational state between sessions. Updated at every session closeout
 (see process.md §8). Prune freely; this file is not frozen.
 
-Snapshot: 2026-07-07, WP-04a.1 closed out.
+Snapshot: 2026-07-07, WP-04b closed out.
 
 ## Completed
 
@@ -51,9 +51,44 @@ Snapshot: 2026-07-07, WP-04a.1 closed out.
           names the DIVERGENT event's run_id; events[0] defines the
           chain's run_id.
 
+  WP-04b  durable append — kernel/log store.go/record.go/recover.go
+          (ADR-0022, PROPOSED): single-file events.log, CRC-framed
+          canonical event bodies, WAL-truncate torn tails with durable
+          (synced) truncation, LOG_CORRUPT/SEQ_GAP refusal leaving
+          bytes untouched. TDD order held: full matrix written against
+          panic stubs, failure wall recorded, then implemented.
+          Verification, all green (/conformance GREEN):
+            1. Fault matrix: 9 named crash points × {empty store,
+               after-2-commits} through the writeSyncer seam — zero
+               committed-event loss, recovery to an event boundary,
+               gapless continuation, reopen-stable; poisoned-store
+               refusal (ErrStorePoisoned) folded into every case.
+            2. Recovery surgery: SEQ_GAP refusal on a synthetic gap;
+               mid-file corruption refuses with bytes untouched; T3/T4
+               tails truncate; owner A2 (sub-magic split) and A3
+               (truncate-then-sync ordering, asserted via recording
+               seam) both tested.
+            3. Round-trips byte-identical + re-seal green: chain.json
+               top-level run (head 9d1be79f…), signed-event-chain (sig
+               survives verbatim), the 20 trace events at base 101
+               (head 36283240ba…, next Append = seq 121); Append on a
+               virgin store reproduces chain.json event_ids and head
+               end-to-end.
+            4. rapid model-based append/crash/recover property; record
+               encoder determinism; two-stores-byte-identical-files.
+            5. Real-process kill capstone (RFC-0002 §9.3): 3 random-
+               point kills per run, recovered lastSeq >= last acked in
+               every iteration (observed acked+1 cases = the ADR-0022
+               accepted-unacked semantics, working as specified).
+          Deviations (minor, flagged): stale package-doc line in
+          chain.go updated alongside the approved ChainBrokenError
+          rider; writeSyncer seam carries Truncate (recovery and A3
+          assertion need it); mid-file CRC flip classifies as C3 not
+          C2 (same refusal behavior, taxonomy label only).
+
 ## In flight
 
-  Nothing. Next session launches WP-04b.
+  Nothing. Next session launches WP-04c or 05a.
 
 ## Owner action items
 
@@ -69,13 +104,22 @@ Snapshot: 2026-07-07, WP-04a.1 closed out.
       toolchain go1.26.1 → 15.0.0 tables active. No ADR edit needed.
   [x] /vector-add candidates from WP-04a: all three accepted by the
       owner and landed as additive chain.json cases (WP-04a.1).
+  [ ] ADR-0022 (durable append: layout, torn-tail recovery, per-
+      platform durability) is PROPOSED — owner to accept or amend on
+      review of the WP-04b implementation, per the plan-approval
+      ruling. The errors.md LOG_CORRUPT row lands with it and reverts
+      with it. Plan-approval rulings recorded in the ADR: any-base
+      recovery contingent on A1 (WP-04c anchors per-container base
+      seq + first event_id); accepted-unacked with the "at least every
+      acknowledged append" guarantee sentence; owner-scope "" chain.
 
 ## Next up
 
-  WP-04b (durable append) — THE critical-path package: 05a, 08, 09, 10
-  all depend on it. Fresh session; kill-9 matrix tests written before
-  recovery code; SEQ_GAP refusal; fsync at event boundary. Then 04c
-  (anchor) any time before the chain-verifier reducer; then 05a.
+  WP-04c (anchor) any time before the chain-verifier reducer; then
+  05a (fold). NOTE for 04c: ADR-0022 places a REQUIREMENT on it (owner
+  A1) — the anchor attests, per container, the base seq and first
+  event_id alongside run heads; the any-base recovery rule is accepted
+  only because anchoring closes front-truncation.
 
 ## Standing context for a new assistant
 
