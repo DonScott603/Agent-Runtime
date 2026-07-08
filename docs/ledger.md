@@ -3,7 +3,7 @@
 Operational state between sessions. Updated at every session closeout
 (see process.md §8). Prune freely; this file is not frozen.
 
-Snapshot: 2026-07-08, WP-04b.1 closed out.
+Snapshot: 2026-07-08, WP-05a closed out.
 
 ## Completed
 
@@ -98,9 +98,58 @@ Snapshot: 2026-07-08, WP-04b.1 closed out.
           code. errors.md LOG_CORRUPT row verified verbatim against
           the ADR (no edit). Doc-only; conformance GREEN.
 
+  WP-05a  fold core — kernel/fold (engine, registry, ViewError,
+          CanonicalStateHash, upcast/sig-validation seams reserved) +
+          plugins/runstatus + plugins/chainverify + local laws
+          (kernel/fold/CLAUDE.md, plugins/CLAUDE.md). ADR-0023
+          (reducer identity: declared plugin_id+semver, hash-shaped)
+          PROPOSED — recommendation (a) endorsed at plan approval,
+          formal acceptance at implementation review per pattern.
+          Owner amendments A1 (string provenance: fixed vocabulary +
+          structured fields in hashed state; chainverify alarm bytes
+          asserted exactly), A2 (rejection atomicity: ErrOutOfOrder
+          before any view sees the event; byte-unchanged states
+          tested), A3 (ADR revisit triggers: WASM delivery; first
+          persisted plugin.registered/invoked) all folded in and
+          tested. TDD order held (tests against panic stubs, failure
+          wall recorded, then implemented). Verification, all green
+          (/conformance GREEN):
+            1. Engine: no-pre-filter probe (Handles is a version
+               gate, never a filter), scope routing (run_id "" never
+               reaches run instances), per-view-INSTANCE sticky
+               failure, SCHEMA_UNKNOWN_VERSION / PLUGIN_CONTRACT /
+               PLUGIN_ERROR classification, panic containment,
+               IdentityHash pinned to independently derived goldens
+               (sha256sum outside Go).
+            2. Determinism: fold-twice hash equality; rapid property
+               incremental == rebuild over random sequences (unknown
+               types, gate trips, mixed runs incl. ""), every (view,
+               run) hash and failure code.
+            3. chainverify == klog.VerifyChain rapid consistency
+               (alarm iff error, same first run+seq) — the
+               incremental and batch verifiers welded together.
+            4. Round-trip integration (kernel/log/fold_roundtrip_
+               test.go, internal package as approved — doubles as
+               the import-topology tripwire; store.go/recover.go
+               untouched): 20 trace events at base 101 through
+               recovery -> fold: run-status completed via
+               suspended(awaiting_approval) waypoint (prefix rebuild
+               + step remainder == full fold), chainverify head ==
+               36283240ba955ea1…, then a store-appended run.suspended
+               v99 (seq 121) makes run-status unavailable
+               (SCHEMA_UNKNOWN_VERSION) while chainverify advances
+               over the same event.
+          Readings recorded (plan approval 2026-07-08): workplan
+          05a's "totality (unknown types skipped)" is reducer-side
+          must-ignore, never engine pre-filtering; run_id=="" events
+          reach no run-scoped instance (scope routing is WHO sees an
+          event; totality is what a seeing reducer must tolerate);
+          RFC-0002 §5 sig validation deferred with the seam reserved
+          in kernel/fold/upcast.go.
+
 ## In flight
 
-  Nothing. Next session launches WP-05a.
+  Nothing. Next session launches WP-04c.
 
 ## Owner action items
 
@@ -117,24 +166,31 @@ Snapshot: 2026-07-08, WP-04b.1 closed out.
   [x] /vector-add candidates from WP-04a: all three accepted by the
       owner and landed as additive chain.json cases (WP-04a.1).
   [x] ADR-0022 ACCEPTED (owner, 2026-07-08, WP-04b.1) after
-      implementation review. Register now 22/22 ACCEPTED, zero
-      pending. The A1 attestation requirement on WP-04c stands in the
-      ADR's Consequences.
+      implementation review. The A1 attestation requirement on WP-04c
+      stands in the ADR's Consequences.
+  [ ] ADR-0023 (reducer identity) formal acceptance at the WP-05a
+      implementation review — recommendation (a) already endorsed at
+      plan approval (owner, 2026-07-08); flip the status line after
+      the human read (process.md §6 pass 3).
 
 ## Next up
 
-  WP-05a (fold), then WP-04c (anchor; must land before the
-  chain-verifier reducer). NOTE for 04c: it inherits the A1
-  attestation requirement stated in ADR-0022 Consequences — the
-  anchor attests, per container, the base seq and first event_id
-  alongside run heads; the any-base recovery rule is accepted only
-  because anchoring closes front-truncation.
+  WP-04c (anchor), then WP-05b or WP-06a per workplan deps. The old
+  note "04c must land before the chain-verifier reducer" is
+  SUPERSEDED by the owner-approved WP-05a plan: the verifier shipped
+  in 05a and folds future anchor.appended events as unknown types
+  (totality dogfood); 04c extends it to verify anchors. NOTE for
+  04c: it inherits the A1 attestation requirement stated in ADR-0022
+  Consequences — the anchor attests, per container, the base seq and
+  first event_id alongside run heads; the any-base recovery rule is
+  accepted only because anchoring closes front-truncation.
 
 ## Standing context for a new assistant
 
   Read in order: docs/architecture.md → docs/process.md → this ledger
   → docs/workplan.md. The RFCs are contracts (win on conflict);
   threat-model.md is the security tiebreaker; ADR register is
-  docs/adr/README.md (D1–D22, all ACCEPTED, zero pending).
+  docs/adr/README.md (D1–D22 ACCEPTED; D23 PROPOSED, acceptance
+  queued on the WP-05a implementation review).
   The owner's review method is process.md §6; the golden-file rituals
   §5 are the most load-bearing habits — hold them.
