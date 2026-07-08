@@ -2,6 +2,9 @@
   "_rules": {
     "zeroing": "event_id is set to the empty string and sig to null before hashing (RFC-0002 s4)",
     "genesis": "prev_hash of a run's first event is 64 zero hex chars",
+    "verify_cases": "each case feeds its events, in order, to the single-run chain verifier; expected names the FIRST failure: code CHAIN_BROKEN with the seq and run_id of the event where verification broke. Run uniformity is a chain property: input spanning two run_ids is a broken chain at the first event whose run_id diverges from the first event's (RFC-0002 D4), not a caller-precondition violation",
+    "seal_cases": "each case seals the recorded event: zeroing is unconditional, so a non-empty recorded event_id and a present sig are both ignored for hashing; expected_event_id is the re-derived identity",
+    "runs": "additional self-contained mini-runs verified exactly like the top-level events: per-event event_id re-derivation, genesis-onward linkage, expected_head. An event whose sig is non-null seals identically to the same event with sig null (sig is zeroed for hashing, RFC-0002 s5); the harness asserts that equality for every signed event",
     "event_id": "sha256 of the canonical form of the zeroed envelope"
   },
   "events": [
@@ -61,6 +64,139 @@
       "payload": {},
       "blobs": [],
       "sig": null
+    }
+  ],
+  "verify_cases": [
+    {
+      "name": "verify-mixed-run",
+      "note": "every event is correctly sealed and linked; the ONLY defect is run_id divergence at seq 3, so implementations checking uniformity/linkage/identity in any order must all report seq 3 (RFC-0002 D4: per-run chains)",
+      "events": [
+        {
+          "seq": 1,
+          "run_id": "run_a",
+          "event_id": "2d7076766d057aa9a278496c8dac21620ded7a19b5e36af71b6161e502028cf1",
+          "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "ts": 1751781000,
+          "mono": 1,
+          "principal": "owner",
+          "type": "run.created",
+          "type_version": 1,
+          "payload": {
+            "agent": "demo",
+            "profile": "work"
+          },
+          "blobs": [],
+          "sig": null
+        },
+        {
+          "seq": 2,
+          "run_id": "run_a",
+          "event_id": "6db4c70a14680cb3ffe545befdee18d87981c39961b8d287ce3005742cc3bbb1",
+          "prev_hash": "2d7076766d057aa9a278496c8dac21620ded7a19b5e36af71b6161e502028cf1",
+          "ts": 1751781001,
+          "mono": 2,
+          "principal": "service:kernel",
+          "type": "run.started",
+          "type_version": 1,
+          "payload": {},
+          "blobs": [],
+          "sig": null
+        },
+        {
+          "seq": 3,
+          "run_id": "run_b",
+          "event_id": "8279f26adfb54eaa38971a619e5482463341817698a82b08fedbc4822120ed93",
+          "prev_hash": "6db4c70a14680cb3ffe545befdee18d87981c39961b8d287ce3005742cc3bbb1",
+          "ts": 1751781002,
+          "mono": 3,
+          "principal": "service:kernel",
+          "type": "run.completed",
+          "type_version": 1,
+          "payload": {},
+          "blobs": [],
+          "sig": null
+        }
+      ],
+      "expected": {
+        "error": "CHAIN_BROKEN",
+        "seq": 3,
+        "run_id": "run_b"
+      }
+    }
+  ],
+  "seal_cases": [
+    {
+      "name": "reseal-stale-id",
+      "note": "recorded event_id is a patterned wrong value and sig is non-null; both are ignored (zeroing is unconditional, RFC-0002 s4)",
+      "event": {
+        "seq": 1,
+        "run_id": "run_0003",
+        "event_id": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "ts": 1751782000,
+        "mono": 1,
+        "principal": "owner",
+        "type": "run.created",
+        "type_version": 1,
+        "payload": {
+          "agent": "demo",
+          "profile": "work"
+        },
+        "blobs": [],
+        "sig": {
+          "alg": "ed25519",
+          "key_id": "owner-k1",
+          "value": "ILLUSTRATIVE"
+        }
+      },
+      "expected_event_id": "b5a22967b7bf09635413137f1f1f143f0a074d79ddeea955bcdd1575dc1f8f70"
+    }
+  ],
+  "runs": [
+    {
+      "name": "signed-event-chain",
+      "note": "seq 2 is a consent-type event (approval.resolved) with sig != null (RFC-0002 s5); its event_id and the head are computed with sig zeroed — the harness also re-seals it with sig stripped and asserts the same id",
+      "events": [
+        {
+          "seq": 1,
+          "run_id": "run_0002",
+          "event_id": "eb95e9ebd2378e0a459f8a002a54b8782877016e12a365931555c85d2f01a2b8",
+          "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "ts": 1751783000,
+          "mono": 1,
+          "principal": "owner",
+          "type": "run.created",
+          "type_version": 1,
+          "payload": {
+            "agent": "demo",
+            "profile": "work"
+          },
+          "blobs": [],
+          "sig": null
+        },
+        {
+          "seq": 2,
+          "run_id": "run_0002",
+          "event_id": "36df89dc36d927d2775520d8917389fcf246b44c160a1a9c1738ae409d0c80c0",
+          "prev_hash": "eb95e9ebd2378e0a459f8a002a54b8782877016e12a365931555c85d2f01a2b8",
+          "ts": 1751783001,
+          "mono": 2,
+          "principal": "owner",
+          "type": "approval.resolved",
+          "type_version": 1,
+          "payload": {
+            "decision": "approve_once",
+            "request_seq": 1
+          },
+          "blobs": [],
+          "sig": {
+            "alg": "ed25519",
+            "key_id": "owner-k1",
+            "value": "ILLUSTRATIVE"
+          }
+        }
+      ],
+      "expected_head": "36df89dc36d927d2775520d8917389fcf246b44c160a1a9c1738ae409d0c80c0"
     }
   ],
   "expected_head": "9d1be79f3411e7e8288e851ba62c5592f60c08aba137753b19599d0cecb7eff5"

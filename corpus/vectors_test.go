@@ -10,8 +10,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/DonScott603/Agent-Runtime/kernel"
@@ -64,17 +66,89 @@ func TestVectors(t *testing.T) {
 	}
 }
 
+type chainRun struct {
+	Name         string         `json:"name"`
+	Note         string         `json:"note"`
+	Events       []kernel.Event `json:"events"`
+	ExpectedHead string         `json:"expected_head"`
+}
+
+type chainVerifyCase struct {
+	Name     string         `json:"name"`
+	Note     string         `json:"note"`
+	Events   []kernel.Event `json:"events"`
+	Expected struct {
+		Error string       `json:"error"`
+		Seq   kernel.Seq   `json:"seq"`
+		RunID kernel.RunID `json:"run_id"`
+	} `json:"expected"`
+}
+
+type chainSealCase struct {
+	Name            string       `json:"name"`
+	Note            string       `json:"note"`
+	Event           kernel.Event `json:"event"`
+	ExpectedEventID string       `json:"expected_event_id"`
+}
+
 type chainFile struct {
 	Rules        map[string]string `json:"_rules"`
 	Events       []kernel.Event    `json:"events"`
+	VerifyCases  []chainVerifyCase `json:"verify_cases"`
+	SealCases    []chainSealCase   `json:"seal_cases"`
+	Runs         []chainRun        `json:"runs"`
 	ExpectedHead string            `json:"expected_head"`
 }
 
-// runChainVectors asserts seal + chain (WP-04a) against chain.json:
-// each recorded event's event_id must re-derive via kernel.SealEvent
-// (which zeroes event_id and sig internally, so passing the event
-// as-recorded also exercises the re-seal path), prev_hash must link
-// genesis-onward, and the last event_id must equal expected_head.
+// assertChainRun asserts one sealed run: each recorded event_id must
+// re-derive via kernel.SealEvent (which zeroes event_id and sig
+// internally, so passing the event as-recorded also exercises the
+// re-seal path), a signed event must seal identically with its sig
+// stripped (_rules "runs"; RFC-0002 s5), prev_hash must link
+// genesis-onward, the last event_id must equal expectedHead, and
+// VerifyChain must agree.
+func assertChainRun(t *testing.T, events []kernel.Event, expectedHead string) {
+	t.Helper()
+	if len(events) == 0 {
+		t.Fatal("run has no events — harness misparse")
+	}
+	prev := kernel.ZeroHash
+	for _, ev := range events {
+		sealed, err := kernel.SealEvent(ev)
+		if err != nil {
+			t.Fatalf("seq %d: SealEvent: %v", ev.Seq, err)
+		}
+		if sealed.EventID != ev.EventID {
+			t.Errorf("seq %d: event_id does not re-derive\n got: %s\nwant: %s", ev.Seq, sealed.EventID, ev.EventID)
+		}
+		if ev.Sig != nil {
+			stripped := ev
+			stripped.Sig = nil
+			resealed, err := kernel.SealEvent(stripped)
+			if err != nil {
+				t.Fatalf("seq %d: SealEvent with sig stripped: %v", ev.Seq, err)
+			}
+			if resealed.EventID != ev.EventID {
+				t.Errorf("seq %d: sig leaked into the hash (RFC-0002 s5)\n stripped: %s\n recorded: %s", ev.Seq, resealed.EventID, ev.EventID)
+			}
+		}
+		if ev.PrevHash != prev {
+			t.Errorf("seq %d: prev_hash linkage\n got: %s\nwant: %s", ev.Seq, ev.PrevHash, prev)
+		}
+		prev = ev.EventID
+	}
+	if prev != expectedHead {
+		t.Errorf("chain head mismatch\n got: %s\nwant: %s", prev, expectedHead)
+	}
+	if err := klog.VerifyChain(events); err != nil {
+		t.Errorf("VerifyChain over vector events: %v", err)
+	}
+}
+
+// runChainVectors asserts seal + chain (WP-04a/WP-04a.1) against
+// chain.json: the top-level run, each mini-run in "runs", the
+// "seal_cases" identities, and the behavioral "verify_cases"
+// (expected OUTCOME, resolution.json precedent).
 func runChainVectors(t *testing.T, path string) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -84,28 +158,35 @@ func runChainVectors(t *testing.T, path string) {
 	if err := json.Unmarshal(raw, &f); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
-	if len(f.Events) == 0 {
-		t.Fatal("chain.json has no events — harness misparse")
+	assertChainRun(t, f.Events, f.ExpectedHead)
+	for _, run := range f.Runs {
+		t.Run(run.Name, func(t *testing.T) { assertChainRun(t, run.Events, run.ExpectedHead) })
 	}
-	prev := kernel.ZeroHash
-	for _, ev := range f.Events {
-		sealed, err := kernel.SealEvent(ev)
-		if err != nil {
-			t.Fatalf("seq %d: SealEvent: %v", ev.Seq, err)
-		}
-		if sealed.EventID != ev.EventID {
-			t.Errorf("seq %d: event_id does not re-derive\n got: %s\nwant: %s", ev.Seq, sealed.EventID, ev.EventID)
-		}
-		if ev.PrevHash != prev {
-			t.Errorf("seq %d: prev_hash linkage\n got: %s\nwant: %s", ev.Seq, ev.PrevHash, prev)
-		}
-		prev = ev.EventID
+	for _, tc := range f.SealCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			sealed, err := kernel.SealEvent(tc.Event)
+			if err != nil {
+				t.Fatalf("SealEvent: %v", err)
+			}
+			if sealed.EventID != tc.ExpectedEventID {
+				t.Errorf("event_id mismatch\n got: %s\nwant: %s", sealed.EventID, tc.ExpectedEventID)
+			}
+		})
 	}
-	if prev != f.ExpectedHead {
-		t.Errorf("chain head mismatch\n got: %s\nwant: %s", prev, f.ExpectedHead)
-	}
-	if err := klog.VerifyChain(f.Events); err != nil {
-		t.Errorf("VerifyChain over vector events: %v", err)
+	for _, tc := range f.VerifyCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			err := klog.VerifyChain(tc.Events)
+			var cbe *klog.ChainBrokenError
+			if !errors.As(err, &cbe) {
+				t.Fatalf("want *ChainBrokenError, got %T: %v", err, err)
+			}
+			if cbe.Seq != tc.Expected.Seq || cbe.RunID != tc.Expected.RunID {
+				t.Errorf("first failure at run %q seq %d, want run %q seq %d", cbe.RunID, cbe.Seq, tc.Expected.RunID, tc.Expected.Seq)
+			}
+			if !strings.Contains(err.Error(), tc.Expected.Error) {
+				t.Errorf("error %q does not carry code %q", err, tc.Expected.Error)
+			}
+		})
 	}
 }
 

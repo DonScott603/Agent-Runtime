@@ -3,7 +3,7 @@
 Operational state between sessions. Updated at every session closeout
 (see process.md §8). Prune freely; this file is not frozen.
 
-Snapshot: 2026-07-07, WP-04a closed out.
+Snapshot: 2026-07-07, WP-04a.1 closed out.
 
 ## Completed
 
@@ -37,6 +37,19 @@ Snapshot: 2026-07-07, WP-04a closed out.
           Deviation (approved): seal core in kernel/seal.go, not
           kernel/log — Go import cycle with the Event type; types.go
           delegates one-line, Canonical-style.
+  WP-04a.1 micro-session — the three accepted /vector-add candidates
+          landed in chain.json as additive cases (owner-accepted, no
+          ADR needed): verify_cases/verify-mixed-run (behavioral,
+          resolution.json precedent), seal_cases/reseal-stale-id,
+          runs/signed-event-chain. Goldens computed by an independent
+          throwaway script implementing the _rules (deleted after);
+          harness extended (assertChainRun + the three sections);
+          diff on chain.json additions-only (136+/0-); conformance
+          GREEN. Interpretations the RFC text left open, now
+          vector-pinned: mixed-run input is CHAIN_BROKEN at the first
+          divergent event (not a caller precondition); the error
+          names the DIVERGENT event's run_id; events[0] defines the
+          chain's run_id.
 
 ## In flight
 
@@ -54,16 +67,8 @@ Snapshot: 2026-07-07, WP-04a closed out.
       tables15.0.0.go (//go:build !go1.27, Version = "15.0.0") and
       tables17.0.0.go (//go:build go1.27, Version = "17.0.0");
       toolchain go1.26.1 → 15.0.0 tables active. No ADR edit needed.
-  [ ] /vector-add candidates from WP-04a (behavior chain.json does
-      not pin; implemented as described, awaiting owner decision):
-        1. Mixed-run_id input to VerifyChain is CHAIN_BROKEN at the
-           first divergent event (per-run chains, RFC-0002 D4) rather
-           than an unchecked caller precondition.
-        2. Re-seal: an event recorded WITH a stale non-empty event_id
-           still seals to the correct identity (zeroing is
-           unconditional).
-        3. A signed-event chain case: chain.json has no sig ≠ null
-           event; only the trace (seq 114) covers sig-zeroing today.
+  [x] /vector-add candidates from WP-04a: all three accepted by the
+      owner and landed as additive chain.json cases (WP-04a.1).
 
 ## Next up
 
