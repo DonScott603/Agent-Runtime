@@ -27,6 +27,8 @@ append-only event log.
   docs/versioning.md          what may change and how
   docs/adr/                   one file per decision; add one for every
                               new decision of consequence
+  docs/process.md             how work is done
+  docs/ledger.md              in-flight state; update at every closeout
 
 ## Security-critical paths — HUMAN REVIEW REQUIRED
 
