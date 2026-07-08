@@ -117,8 +117,10 @@ func Canonical(v any) ([]byte, error) { return canon.Canonical(v) }
 // SealEvent computes EventID: normalize the envelope first
 // (NormalizeEnvelope — one logical event, one byte form), then zero
 // event_id (empty string) and sig (null), canonicalize, sha256
-// (docs/vectors/chain.json _rules).
-func SealEvent(e Event) (Event, error) { panic("WP-04: implement log writer") }
+// (docs/vectors/chain.json _rules). A non-empty input EventID is
+// ignored and re-sealed from scratch. Implementation: kernel/seal.go;
+// chain threading and verification: kernel/log.
+func SealEvent(e Event) (Event, error) { return sealEvent(e) }
 
 // ---------------------------------------------------------------------
 // Scopes, rules, resolution (RFC-0003) — shapes match resolution.json

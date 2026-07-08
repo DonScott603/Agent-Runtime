@@ -15,18 +15,19 @@ import (
 	"testing"
 
 	"github.com/DonScott603/Agent-Runtime/kernel"
+	klog "github.com/DonScott603/Agent-Runtime/kernel/log"
 	"github.com/DonScott603/Agent-Runtime/vault"
 )
 
 const vectorsDir = "../docs/vectors"
 
-// Registered vector files. canon.json (WP-01) and blob.json (WP-03)
-// are asserted; the rest are skipped-but-registered until their work
-// packages land.
+// Registered vector files. canon.json (WP-01), blob.json (WP-03) and
+// chain.json (WP-04a) are asserted; the rest are skipped-but-registered
+// until their work packages land.
 var vectorFiles = map[string]string{
 	"canon.json":      "", // asserted below
 	"blob.json":       "", // asserted below
-	"chain.json":      "WP-04a: seal + chain",
+	"chain.json":      "", // asserted below
 	"resolution.json": "WP-06a: matchers + resolve",
 	"derivation.json": "WP-06b: derive (manifest scope derivation)",
 	"upcaster.json":   "fold-time payload migration (versioning.md M3/M4)",
@@ -54,9 +55,57 @@ func TestVectors(t *testing.T) {
 			case "blob.json":
 				runBlobVectors(t, path)
 				return
+			case "chain.json":
+				runChainVectors(t, path)
+				return
 			}
 			t.Skip("registered, not yet asserted: " + skip)
 		})
+	}
+}
+
+type chainFile struct {
+	Rules        map[string]string `json:"_rules"`
+	Events       []kernel.Event    `json:"events"`
+	ExpectedHead string            `json:"expected_head"`
+}
+
+// runChainVectors asserts seal + chain (WP-04a) against chain.json:
+// each recorded event's event_id must re-derive via kernel.SealEvent
+// (which zeroes event_id and sig internally, so passing the event
+// as-recorded also exercises the re-seal path), prev_hash must link
+// genesis-onward, and the last event_id must equal expected_head.
+func runChainVectors(t *testing.T, path string) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	var f chainFile
+	if err := json.Unmarshal(raw, &f); err != nil {
+		t.Fatalf("parsing %s: %v", path, err)
+	}
+	if len(f.Events) == 0 {
+		t.Fatal("chain.json has no events — harness misparse")
+	}
+	prev := kernel.ZeroHash
+	for _, ev := range f.Events {
+		sealed, err := kernel.SealEvent(ev)
+		if err != nil {
+			t.Fatalf("seq %d: SealEvent: %v", ev.Seq, err)
+		}
+		if sealed.EventID != ev.EventID {
+			t.Errorf("seq %d: event_id does not re-derive\n got: %s\nwant: %s", ev.Seq, sealed.EventID, ev.EventID)
+		}
+		if ev.PrevHash != prev {
+			t.Errorf("seq %d: prev_hash linkage\n got: %s\nwant: %s", ev.Seq, ev.PrevHash, prev)
+		}
+		prev = ev.EventID
+	}
+	if prev != f.ExpectedHead {
+		t.Errorf("chain head mismatch\n got: %s\nwant: %s", prev, f.ExpectedHead)
+	}
+	if err := klog.VerifyChain(f.Events); err != nil {
+		t.Errorf("VerifyChain over vector events: %v", err)
 	}
 }
 
