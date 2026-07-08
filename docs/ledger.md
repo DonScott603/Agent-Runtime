@@ -3,7 +3,7 @@
 Operational state between sessions. Updated at every session closeout
 (see process.md §8). Prune freely; this file is not frozen.
 
-Snapshot: 2026-07-08, WP-05a.1 closed out.
+Snapshot: 2026-07-08, WP-04c closed out.
 
 ## Completed
 
@@ -158,9 +158,64 @@ Snapshot: 2026-07-08, WP-05a.1 closed out.
           process.md §4 paste-back sentence. Doc-only; conformance
           GREEN.
 
+  WP-04c  anchor event — kernel/anchor.go (Merkle construction +
+          payload types, shared by store and verifier),
+          kernel/log/anchor.go (WriteAnchor), store.go base-tracking
+          + appendLocked extraction, plugins/chainverify 0.1.0→0.2.0
+          (anchor verification; first real ADR-0023 bump, identity
+          golden pinned via sha256sum), docs/vectors/anchor.json
+          (ALLOW_FROZEN additive creation; goldens by independent
+          Python script + printf|sha256sum hand-lane; astral-ordering
+          and NFC discriminator cases carry the WRONG-implementation
+          roots in their notes). ADR-0024 PROPOSED (rulings + riders
+          R1/R2 folded; formal acceptance at implementation review
+          per pattern). errors.md ANCHOR_MISMATCH row (ADR-0024).
+          Workplan rider: moot scheduling sentence deleted.
+          Verification, all green (/conformance GREEN, anchor.json
+          asserted):
+            1. Vectors: 6 root cases + payload case (canonical bytes
+               + sha256 pin the payload schema itself); three
+               derivation lanes agreed before the Go implementation
+               ran (script, sha256sum chain, then Go).
+            2. Store: empty-store refusal (plain error, not poisoned,
+               next Append seq 1), envelope/payload/base contract,
+               base 101 attestation through recovery (trace),
+               tamper-flips-root (workplan verify), anchors chain
+               through "" (second anchor prev = first), reopen
+               byte-identical.
+            3. chainverify: happy anchored fold; tampered head /
+               wrong base seq / wrong first event_id → exactly one
+               ANCHOR_MISMATCH each (anchor_root / anchor_base) with
+               expected/got structured fields; Broken untouched,
+               heads keep advancing; anchor-as-first-event alarms
+               anchor_base (fixpoint corollary, tested);
+               {"heads":null} lands anchor_payload (gate-first);
+               in-run anchors checked uniformly; v2 anchor →
+               SCHEMA_UNKNOWN_VERSION (R2); A1 exact-bytes green
+               with base in state.
+            4. Properties: weld rapid extended (CHAIN_BROKEN iff
+               VerifyChain, same first (run,seq); vocabularies never
+               cross codes — ruling rider; wrongRoot anchor alarms
+               exactly when reached; incremental==rebuild with
+               anchors); AnchorRoot determinism; canon-order
+               agreement rapid; anchored trace end-to-end
+               (TestFoldRoundTripAnchoredTrace).
+          Deviations (flagged in commit): Merkle construction in
+          kernel/anchor.go not kernel/log (import topology; seal.go
+          precedent — owner-accepted at plan approval); leaf order
+          DERIVED from Canonical's emitted key order instead of a
+          duplicated comparator (divergence impossible by
+          construction; ADR-0024 wording updated);
+          TestUnknownTypesThreadChain fixture swapped anchor.appended
+          for ext.vendor.custom (the type is no longer unknown to
+          this reducer — that is the point of 0.2.0).
+
 ## In flight
 
-  Nothing. Next session launches WP-04c.
+  Nothing. ADR-0024 awaits owner acceptance at implementation review
+  (process.md §6; kernel/log diffs need human review — store.go
+  gained base-tracking + appendLocked extraction, anchor.go is new
+  append-path code).
 
 ## Owner action items
 
@@ -181,20 +236,18 @@ Snapshot: 2026-07-08, WP-05a.1 closed out.
       stands in the ADR's Consequences.
   [x] ADR-0023 ACCEPTED (owner, 2026-07-08, WP-05a.1) after
       implementation review confirmed the IdentityHash preimage
-      against the independently derived goldens. Register now 23/23
-      ACCEPTED, zero pending.
+      against the independently derived goldens.
+  [ ] ADR-0024 (anchor payload schema + Merkle construction) awaits
+      acceptance at implementation review. Review focus per
+      threat-model O1: kernel/log/store.go (base-tracking,
+      appendLocked extraction), kernel/log/anchor.go (WriteAnchor),
+      kernel/anchor.go (the frozen construction).
 
 ## Next up
 
-  WP-04c (anchor), then WP-05b or WP-06a per workplan deps. The old
-  note "04c must land before the chain-verifier reducer" is
-  SUPERSEDED by the owner-approved WP-05a plan: the verifier shipped
-  in 05a and folds future anchor.appended events as unknown types
-  (totality dogfood); 04c extends it to verify anchors. NOTE for
-  04c: it inherits the A1 attestation requirement stated in ADR-0022
-  Consequences — the anchor attests, per container, the base seq and
-  first event_id alongside run heads; the any-base recovery rule is
-  accepted only because anchoring closes front-truncation.
+  WP-05b or WP-06a per workplan deps (both unblocked). An
+  interstitial WP-04c.1 should flip ADR-0024 after the owner's
+  implementation review (the 0022/0023 pattern).
 
 ## Standing context for a new assistant
 

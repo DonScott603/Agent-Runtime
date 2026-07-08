@@ -1,0 +1,88 @@
+{
+  "_rules": {
+    "construction": "RFC 6962 Merkle Tree Head over the run-head set. Interior node = sha256(0x01 || left || right) over the RAW 32-byte child digests; subtrees split at k = the largest power of two strictly less than n; no node duplication",
+    "leaf": "leaf hash = sha256(0x00 || canonical({\"head\": <lowercase hex head>, \"run_id\": <run id>})) where canonical is the RFC-0001 s5 form (canon.json _rules): NFC-normalized strings, sorted keys, minimal escaping, no whitespace",
+    "ordering": "leaves ascend by NFC-normalized run_id in UTF-16 code-unit order (ADR-0020; RFC 8785 s3.2.3) — the leaf sequence equals the key order of the canonically serialized heads object. Input is a map: duplicate run_ids are unrepresentable, and two run_ids colliding after NFC are an error",
+    "domain_separation": "0x00 prefixes every leaf preimage, 0x01 every interior preimage (second-preimage defense; RFC 6962)",
+    "empty": "the root of the empty head set is sha256 of the empty string",
+    "single": "the root of a one-leaf set is that leaf's hash",
+    "encoding": "roots render as lowercase hex, like every hash in the system",
+    "payload": "anchor.appended v1 payload = {\"container\": {\"base_seq\": <u64>, \"first_event_id\": <hex>}, \"heads\": {<run_id>: <head hex>, ...}, \"merkle_root\": <hex>} as canonical bytes with no omitted keys; merkle_root MUST recompute from heads by these rules; the \"\" entry of heads is the latest owner-scope event (RFC-0002 D4), present whenever an owner-scope event precedes the anchor (ADR-0024)",
+    "root_cases": "each case computes the Merkle root over its heads map; expected_root is the golden. ordering-utf16-astral discriminates UTF-16 code-unit order from code-point order (U+10000 sorts first); nfc-run-id carries a DECOMPOSED run_id (e + U+0301) whose leaf hashes the NFC form",
+    "payload_cases": "each case is a complete v1 anchor payload: the harness asserts the root recomputes from heads and equals merkle_root, and that the canonical serialization of the payload is byte-exact (canonical) with the stated sha256 — pinning the payload schema itself (ADR-0017/ADR-0024)",
+    "provenance": "goldens computed by an independent throwaway script implementing these rules (process.md s5), never by the implementation under test; empty/single/two-leaf roots additionally hand-derived via printf | sha256sum"
+  },
+  "root_cases": [
+    {
+      "name": "empty-set",
+      "note": "MTH({}) = sha256 of the empty string. The pure function is total; the store still refuses to WRITE an anchor over an empty container (ADR-0024)",
+      "heads": {},
+      "expected_root": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "single-leaf",
+      "note": "root == the leaf hash: sha256(0x00 || {\"head\":...,\"run_id\":\"run_0001\"})",
+      "heads": {
+        "run_0001": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expected_root": "780748db7888e02894dbd37b2f6a34d1648c12c979fee1e0c78fc03586020aea"
+    },
+    {
+      "name": "two-leaves",
+      "note": "sha256(0x01 || leaf(run_0001) || leaf(run_0002)), raw digests",
+      "heads": {
+        "run_0001": "1111111111111111111111111111111111111111111111111111111111111111",
+        "run_0002": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expected_root": "03b6584cc3d00b6276ced6758f2a28743619054d90c2272893802e68ec4e5a3f"
+    },
+    {
+      "name": "five-leaves-split-rule",
+      "note": "n=5 splits k=4|1 (largest power of two < n), exercising the unbalanced RFC 6962 shape; includes the \"\" owner-scope chain as an ordinary leaf (sorts first)",
+      "heads": {
+        "": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "run_a": "1111111111111111111111111111111111111111111111111111111111111111",
+        "run_b": "2222222222222222222222222222222222222222222222222222222222222222",
+        "run_c": "3333333333333333333333333333333333333333333333333333333333333333",
+        "run_d": "4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "expected_root": "d35aba257c6d4af26c3aaaf84586d3c8a5ff603e6ecdeed9dcbf86112afc3ce4"
+    },
+    {
+      "name": "ordering-utf16-astral",
+      "note": "U+10000 (surrogate pair D800 DC00) sorts BEFORE U+FF61 in UTF-16 code-unit order though it sorts after by code point / UTF-8 bytes — the ADR-0020 discriminating pair; a code-point-sorting implementation derives f1c03eadd0d370fbad54a18b30d898417af854d85c5796bb634366759a17bf3c instead",
+      "heads": {
+        "𐀀": "1111111111111111111111111111111111111111111111111111111111111111",
+        "｡": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expected_root": "0037f0d35971adf8a7407ed5ed13199a96292275f2a821f4754ab59906d8b225"
+    },
+    {
+      "name": "nfc-run-id",
+      "note": "the run_id is DECOMPOSED (e + combining acute U+0301); the leaf hashes the NFC form (U+00E9). A non-normalizing implementation derives 4808571d488fc61a28aaeaf9640e0f4f5c0813e1340399037c604d97a4700022 instead",
+      "heads": {
+        "é": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expected_root": "65b54b5829a757b5bfc421de67bee8e2055df099c6733ffcfe05c3fdbc3f4f4b"
+    }
+  ],
+  "payload_cases": [
+    {
+      "name": "anchor-payload-recomputes",
+      "note": "a complete v1 anchor payload: container attests the ADR-0022 A1 base (seq 101, the annotated trace's first event_id); heads include the \"\" owner-scope entry; merkle_root recomputes from heads; canonical/sha256 pin the payload schema bytes themselves",
+      "payload": {
+        "container": {
+          "base_seq": 101,
+          "first_event_id": "42920793ba6c4ba0cafc496485c6163349806f009032e3b1d408718d43e3938d"
+        },
+        "heads": {
+          "": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "run_0042": "5555555555555555555555555555555555555555555555555555555555555555"
+        },
+        "merkle_root": "49470bf7b597382eb1cb2502d4965d65e1d39688a52441886c9fb67c58f3e407"
+      },
+      "canonical": "{\"container\":{\"base_seq\":101,\"first_event_id\":\"42920793ba6c4ba0cafc496485c6163349806f009032e3b1d408718d43e3938d\"},\"heads\":{\"\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"run_0042\":\"5555555555555555555555555555555555555555555555555555555555555555\"},\"merkle_root\":\"49470bf7b597382eb1cb2502d4965d65e1d39688a52441886c9fb67c58f3e407\"}",
+      "sha256": "83a6a6d8ec53a0bceedd9befdd8325e22e467dde13bfaa555c33ccad404d44be"
+    }
+  ]
+}

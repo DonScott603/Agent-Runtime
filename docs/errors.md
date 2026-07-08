@@ -22,6 +22,7 @@ via ADR. Wire form inside payloads:
 | PLUGIN_ERROR | plugin | plugin.invoked output error value | per caller | deterministic error VALUE, not a panic |
 | WORKER_LIMIT | broker | effect.result error | continues | rlimit breach; isolation descriptor names the limit |
 | CHAIN_BROKEN | verifier reducer | integrity alarm (owner notification) | none (read path) | tamper-evidence tripwire; never auto-"repair" |
+| ANCHOR_MISMATCH | verifier reducer | integrity alarm (owner notification) | none (read path) | impeaches the anchor, not the chain — linkage evidence stands; heads keep advancing; never repaired (ADR-0024) |
 | SIG_INVALID | fold | consent event treated as absent + alarm | as if unsigned | RFC-0002 §5 |
 | SCHEMA_UNKNOWN_VERSION | fold | fold error surfaced to owner | view unavailable | missing upcaster == release-blocking bug |
 | SEQ_GAP | log recovery | refuses to open store + alarm | none | should be impossible (D5 gapless); treat as corruption |

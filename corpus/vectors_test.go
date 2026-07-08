@@ -30,6 +30,7 @@ var vectorFiles = map[string]string{
 	"canon.json":      "", // asserted below
 	"blob.json":       "", // asserted below
 	"chain.json":      "", // asserted below
+	"anchor.json":     "", // asserted below
 	"resolution.json": "WP-06a: matchers + resolve",
 	"derivation.json": "WP-06b: derive (manifest scope derivation)",
 	"upcaster.json":   "fold-time payload migration (versioning.md M3/M4)",
@@ -59,6 +60,9 @@ func TestVectors(t *testing.T) {
 				return
 			case "chain.json":
 				runChainVectors(t, path)
+				return
+			case "anchor.json":
+				runAnchorVectors(t, path)
 				return
 			}
 			t.Skip("registered, not yet asserted: " + skip)
@@ -185,6 +189,79 @@ func runChainVectors(t *testing.T, path string) {
 			}
 			if !strings.Contains(err.Error(), tc.Expected.Error) {
 				t.Errorf("error %q does not carry code %q", err, tc.Expected.Error)
+			}
+		})
+	}
+}
+
+type anchorRootCase struct {
+	Name         string                       `json:"name"`
+	Note         string                       `json:"note"`
+	Heads        map[kernel.RunID]kernel.Hash `json:"heads"`
+	ExpectedRoot string                       `json:"expected_root"`
+}
+
+type anchorPayloadCase struct {
+	Name      string               `json:"name"`
+	Note      string               `json:"note"`
+	Payload   kernel.AnchorPayload `json:"payload"`
+	Canonical string               `json:"canonical"`
+	SHA256    string               `json:"sha256"`
+}
+
+type anchorFile struct {
+	Rules        map[string]string   `json:"_rules"`
+	RootCases    []anchorRootCase    `json:"root_cases"`
+	PayloadCases []anchorPayloadCase `json:"payload_cases"`
+}
+
+// runAnchorVectors asserts the anchor Merkle construction and payload
+// schema (WP-04c; ADR-0024) against anchor.json: every root case's
+// Merkle root, and for payload cases both the root-recomputes-from-
+// heads law and the byte-exact canonical serialization of the payload
+// (pinning kernel.AnchorPayload's shape, ADR-0017).
+func runAnchorVectors(t *testing.T, path string) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	var f anchorFile
+	if err := json.Unmarshal(raw, &f); err != nil {
+		t.Fatalf("parsing %s: %v", path, err)
+	}
+	if len(f.RootCases) == 0 || len(f.PayloadCases) == 0 {
+		t.Fatal("anchor.json has no cases — harness misparse")
+	}
+	for _, tc := range f.RootCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			got, err := kernel.AnchorRoot(tc.Heads)
+			if err != nil {
+				t.Fatalf("AnchorRoot: %v", err)
+			}
+			if got != tc.ExpectedRoot {
+				t.Errorf("root mismatch\n got: %s\nwant: %s", got, tc.ExpectedRoot)
+			}
+		})
+	}
+	for _, tc := range f.PayloadCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			root, err := kernel.AnchorRoot(tc.Payload.Heads)
+			if err != nil {
+				t.Fatalf("AnchorRoot over payload heads: %v", err)
+			}
+			if root != tc.Payload.MerkleRoot {
+				t.Errorf("merkle_root does not recompute from heads\n got: %s\nwant: %s", root, tc.Payload.MerkleRoot)
+			}
+			b, err := kernel.Canonical(tc.Payload)
+			if err != nil {
+				t.Fatalf("Canonical(payload): %v", err)
+			}
+			if string(b) != tc.Canonical {
+				t.Errorf("canonical payload bytes mismatch (schema drift?)\n got: %s\nwant: %s", b, tc.Canonical)
+			}
+			sum := sha256.Sum256(b)
+			if gotHex := hex.EncodeToString(sum[:]); gotHex != tc.SHA256 {
+				t.Errorf("payload sha256 mismatch\n got: %s\nwant: %s", gotHex, tc.SHA256)
 			}
 		})
 	}

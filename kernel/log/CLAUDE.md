@@ -11,6 +11,11 @@ tamper-evidence primitive — treat changes with the same care.
   RFC-0002 §4: NormalizeEnvelope before hashing (ADR-0020), zero
   event_id ("") and sig (null), sha256 lowercase hex, genesis
   prev_hash = kernel.ZeroHash.
+- The anchor Merkle construction and payload schema are frozen by
+  docs/vectors/anchor.json _rules (ADR-0024); the construction lives
+  in kernel/anchor.go (shared with the fold-side verifier), and
+  WriteAnchor (anchor.go here) is append-path code — same review
+  footing as store.go.
 - VerifyChain REPORTS (*ChainBrokenError naming run + seq) and never
   repairs, truncates, or continues past the first failure
   (docs/errors.md CHAIN_BROKEN).

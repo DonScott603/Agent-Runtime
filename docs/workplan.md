@@ -42,8 +42,7 @@ WP-04b Durable append (kernel/log, systems)
 WP-04c Anchor event (kernel/log)
   Merkle root over run heads, anchor.appended, export helper.
   [refs] RFC-0002 §4, D4 · [verify] anchor recomputes from heads;
-  tamper flips it · [deps] WP-04b. May be scheduled any time before
-  the chain-verifier reducer. REQUIRED (WP-05a ruling): extend
+  tamper flips it · [deps] WP-04b. REQUIRED (WP-05a ruling): extend
   plugins/chainverify (or add an anchor-verify view) to validate
   anchor events — Merkle root recomputes from run heads, and the
   ADR-0022 A1 attestation (per-container base seq + first event_id)

@@ -6,6 +6,8 @@ and raise an ADR - do not pick silently.
 
   canon.json        canonical serialization + hashing (RFC-0001 D2)
   chain.json        envelope hashing + per-run chains (RFC-0002 s4)
+  blob.json         vault-lite blob format + key wrap (ADR-0021)
+  anchor.json       anchor Merkle construction + payload (ADR-0024)
   resolution.json   gate resolution, Option B (RFC-0003 D7/D8)
   derivation.json   manifest scope derivation (RFC-0006 s4)
   upcaster.json     fold-time payload migration (versioning.md M3/M4)

@@ -79,6 +79,11 @@ func TestNewRegistryProbesInit(t *testing.T) {
 //	  -> 3a4f846f395ab6bc3641ae10cfe3a079a1ab7a43880d65f37e4ee34028c9781b
 //	printf '%s' '{"plugin_id":"run-status","semver":"0.2.0"}' | sha256sum
 //	  -> b9a6c6ad03733e89d49769975c4f2c2e22b5e2674c0e870ebc8cf8c9cf63579e
+//	printf '%s' '{"plugin_id":"chain-verify","semver":"0.2.0"}' | sha256sum
+//	  -> 453e03e5e28ca21604e39e483145ccb06743e618960f65462611e9df33611332
+//
+// chain-verify@0.2.0 is the first real ADR-0023 bump (WP-04c anchor
+// verification); its identity is pinned here the moment it exists.
 func TestIdentityHashPreimage(t *testing.T) {
 	got, err := fold.IdentityHash("run-status", "0.1.0")
 	if err != nil {
@@ -102,5 +107,13 @@ func TestIdentityHashPreimage(t *testing.T) {
 	}
 	if bumped == got {
 		t.Error("semver bump did not change the identity hash")
+	}
+	cv, err := fold.IdentityHash("chain-verify", "0.2.0")
+	if err != nil {
+		t.Fatalf("IdentityHash: %v", err)
+	}
+	const wantCV = "453e03e5e28ca21604e39e483145ccb06743e618960f65462611e9df33611332"
+	if cv != wantCV {
+		t.Errorf("chain-verify@0.2.0 IdentityHash mismatch\n got: %s\nwant: %s", cv, wantCV)
 	}
 }

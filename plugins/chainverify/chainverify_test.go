@@ -18,8 +18,14 @@ import (
 // cvState mirrors the reducer's state shape for assertions.
 type cvState struct {
 	Alarms []cvAlarm              `json:"alarms"`
+	Base   cvBase                 `json:"base"`
 	Broken map[string]bool        `json:"broken"`
 	Heads  map[string]kernel.Hash `json:"heads"`
+}
+
+type cvBase struct {
+	EventID kernel.Hash `json:"event_id"`
+	Seq     kernel.Seq  `json:"seq"`
 }
 
 type cvAlarm struct {
@@ -31,6 +37,13 @@ type cvAlarm struct {
 	GotPrev      kernel.Hash `json:"got_prev"`
 	ExpectedID   kernel.Hash `json:"expected_id"`
 	GotID        kernel.Hash `json:"got_id"`
+
+	ExpectedRoot    kernel.Hash `json:"expected_root"`
+	GotRoot         kernel.Hash `json:"got_root"`
+	ExpectedBaseSeq kernel.Seq  `json:"expected_base_seq"`
+	GotBaseSeq      kernel.Seq  `json:"got_base_seq"`
+	ExpectedFirstID kernel.Hash `json:"expected_first_id"`
+	GotFirstID      kernel.Hash `json:"got_first_id"`
 }
 
 // sealedChain builds a properly threaded, sealed chain for one run:
@@ -129,9 +142,12 @@ func TestOwnerScopeChain(t *testing.T) {
 }
 
 // Unknown event types thread the chain normally — the totality
-// dogfood: anchor.appended (WP-04c's future) is just another link.
+// dogfood. (anchor.appended left this club in 0.2.0: it is now the
+// one type whose payload this reducer parses; a malformed anchor
+// still THREADS — see TestAnchorPayloadMalformed — it just also
+// alarms on content.)
 func TestUnknownTypesThreadChain(t *testing.T) {
-	c := sealedChain(t, "run_a", 1, 3, "run.created", "utterly.unknown", "anchor.appended")
+	c := sealedChain(t, "run_a", 1, 3, "run.created", "utterly.unknown", "ext.vendor.custom")
 	s := parse(t, applyAll(t, c))
 	if len(s.Alarms) != 0 {
 		t.Fatalf("unknown types raised alarms: %+v", s.Alarms)
@@ -231,7 +247,10 @@ func TestUnderivableAlarmBytesAreStructuredFactsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply must alarm, not error: %v", err)
 	}
-	want := `{"alarms":[{"code":"CHAIN_BROKEN","run_id":"run_x","seq":7,"detail":"underivable"}],"broken":{"run_x":true},"heads":{}}`
+	// base is recorded AS-OBSERVED from the first event seen — here the
+	// unsealable event itself, whose stored event_id is empty (ADR-0024,
+	// owner R1).
+	want := `{"alarms":[{"code":"CHAIN_BROKEN","run_id":"run_x","seq":7,"detail":"underivable"}],"base":{"event_id":"","seq":7},"broken":{"run_x":true},"heads":{}}`
 	if !bytes.Equal(state, []byte(want)) {
 		t.Errorf("alarm bytes are not the fixed-vocabulary shape\n got: %s\nwant: %s", state, want)
 	}
@@ -256,8 +275,8 @@ func TestRegistrationShape(t *testing.T) {
 	if r.Scope != fold.ScopeOwner {
 		t.Errorf("scope %q, want owner", r.Scope)
 	}
-	if len(r.Handles) != 0 {
-		t.Errorf("Handles must be empty (claims payload understanding of NOTHING), got %v", r.Handles)
+	if len(r.Handles) != 1 || r.Handles[kernel.AnchorEventType] != 1 {
+		t.Errorf("Handles must declare exactly anchor.appended v1 (the one payload this reducer parses; ADR-0024), got %v", r.Handles)
 	}
 	if _, err := fold.NewRegistry(r); err != nil {
 		t.Errorf("registration rejected by NewRegistry: %v", err)

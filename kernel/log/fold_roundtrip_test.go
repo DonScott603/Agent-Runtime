@@ -176,3 +176,37 @@ func TestFoldRoundTripTrace(t *testing.T) {
 		t.Errorf("chain head did not advance over the v99 event: %s, want %s", cs.Heads["run_0042"], sealed.EventID)
 	}
 }
+
+// The anchored end-to-end weld (WP-04c): the store WRITES an anchor
+// over the recovered trace (base 101), and the fold-side verifier
+// independently re-derives and confirms every claim in it — Merkle
+// root from its own heads, base attestation from its own observed
+// base — with zero alarms. The two sides never share state; agreeing
+// green is the whole point of the anchor.
+func TestFoldRoundTripAnchoredTrace(t *testing.T) {
+	events := loadTraceEvents(t)
+	_, store := persistReopen(t, events)
+
+	anchor, err := store.WriteAnchor(1751793800, 40)
+	if err != nil {
+		t.Fatalf("WriteAnchor: %v", err)
+	}
+	if anchor.Seq != 121 {
+		t.Fatalf("anchor seq %d, want 121", anchor.Seq)
+	}
+
+	f, err := fold.FromSource(foldRegistry(t), store)
+	if err != nil {
+		t.Fatalf("FromSource: %v", err)
+	}
+	cs := chainState(t, f)
+	if len(cs.Alarms) != 0 || len(cs.Broken) != 0 {
+		t.Fatalf("anchored trace raised alarms: %+v", cs)
+	}
+	if cs.Heads["run_0042"] != traceHead {
+		t.Errorf("run_0042 head %s, want the documented trace head", cs.Heads["run_0042"])
+	}
+	if cs.Heads[""] != anchor.EventID {
+		t.Errorf(`heads[""] = %s, want the anchor %s`, cs.Heads[""], anchor.EventID)
+	}
+}

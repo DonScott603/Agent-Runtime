@@ -85,6 +85,13 @@ type Store struct {
 	hasRecords bool  // distinguishes an empty store from base != 1
 	poison     error // non-nil after a failed append; see ErrStorePoisoned
 	closed     bool
+
+	// Container base (ADR-0022 A1; anchored by WriteAnchor, ADR-0024):
+	// the first committed record's seq and event_id, captured at
+	// recovery or on the first append to a virgin store. Zero values
+	// iff hasRecords is false.
+	baseSeq      kernel.Seq
+	firstEventID kernel.Hash
 }
 
 // Open opens or creates the single-file event log under dir
@@ -159,13 +166,18 @@ func openStore(dir string, wrap func(*os.File) writeSyncer) (*Store, error) {
 	if _, err := f.Seek(res.validLen, io.SeekStart); err != nil {
 		return fail(fmt.Errorf("log: open %s: %w", path, err))
 	}
-	return &Store{
+	st := &Store{
 		f:          h,
 		path:       path,
 		lastSeq:    res.lastSeq,
 		heads:      res.heads,
 		hasRecords: len(res.events) > 0,
-	}, nil
+	}
+	if st.hasRecords {
+		st.baseSeq = res.events[0].Seq
+		st.firstEventID = res.events[0].EventID
+	}
+	return st, nil
 }
 
 // syncDir flushes the directory entry after file creation.
@@ -208,6 +220,13 @@ func (s *Store) Append(e kernel.Event) (kernel.Event, error) {
 	if err := s.usable(); err != nil {
 		return kernel.Event{}, err
 	}
+	return s.appendLocked(e)
+}
+
+// appendLocked is Append's body: seq assignment, chain threading,
+// seal, persist. WriteAnchor (kernel/log/anchor.go) shares it so an
+// anchor commits through exactly the normal append path.
+func (s *Store) appendLocked(e kernel.Event) (kernel.Event, error) {
 	e.Seq = s.lastSeq + 1
 	e.EventID = ""
 	if h, ok := s.heads[e.RunID]; ok {
@@ -288,6 +307,12 @@ func (s *Store) appendSealedLocked(sealed kernel.Event) error {
 	if err := s.f.Sync(); err != nil {
 		s.poison = err
 		return fmt.Errorf("log: append sync: %w", err)
+	}
+	if !s.hasRecords {
+		// First record of a virgin store: it IS the container base
+		// (ADR-0022 A1; attested by WriteAnchor, ADR-0024).
+		s.baseSeq = sealed.Seq
+		s.firstEventID = sealed.EventID
 	}
 	s.lastSeq = sealed.Seq
 	s.hasRecords = true
