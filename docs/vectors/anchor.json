@@ -10,6 +10,7 @@
     "payload": "anchor.appended v1 payload = {\"container\": {\"base_seq\": <u64>, \"first_event_id\": <hex>}, \"heads\": {<run_id>: <head hex>, ...}, \"merkle_root\": <hex>} as canonical bytes with no omitted keys; merkle_root MUST recompute from heads by these rules; the \"\" entry of heads is the latest owner-scope event (RFC-0002 D4), present whenever an owner-scope event precedes the anchor (ADR-0024)",
     "root_cases": "each case computes the Merkle root over its heads map; expected_root is the golden. ordering-utf16-astral discriminates UTF-16 code-unit order from code-point order (U+10000 sorts first); nfc-run-id carries a DECOMPOSED run_id (e + U+0301) whose leaf hashes the NFC form",
     "payload_cases": "each case is a complete v1 anchor payload: the harness asserts the root recomputes from heads and equals merkle_root, and that the canonical serialization of the payload is byte-exact (canonical) with the stated sha256 — pinning the payload schema itself (ADR-0017/ADR-0024)",
+    "verify_cases": "behavioral cases for the anchor VERIFIER contract (ADR-0024; errors.md ANCHOR_MISMATCH): each case feeds its events, in order, to the chain-verify reducer and asserts the resulting alarm list EXACTLY (count, code, detail term, structured expected/got fields), that broken stays empty, and that every run's held head equals its last event's event_id — anchor alarms freeze nothing. Event fixtures were built with the vector-verified SealEvent rather than an independent script: the OUTCOMES are the pinned content, not the fixture hashes (owner reading, WP-04c.1); a mis-sealed fixture self-diagnoses as a CHAIN_BROKEN alarm and fails the expected list",
     "provenance": "goldens computed by an independent throwaway script implementing these rules (process.md s5), never by the implementation under test; empty/single/two-leaf roots additionally hand-derived via printf | sha256sum"
   },
   "root_cases": [
@@ -83,6 +84,251 @@
       },
       "canonical": "{\"container\":{\"base_seq\":101,\"first_event_id\":\"42920793ba6c4ba0cafc496485c6163349806f009032e3b1d408718d43e3938d\"},\"heads\":{\"\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"run_0042\":\"5555555555555555555555555555555555555555555555555555555555555555\"},\"merkle_root\":\"49470bf7b597382eb1cb2502d4965d65e1d39688a52441886c9fb67c58f3e407\"}",
       "sha256": "83a6a6d8ec53a0bceedd9befdd8325e22e467dde13bfaa555c33ccad404d44be"
+    }
+  ],
+  "verify_cases": [
+    {
+      "name": "malformed-payload-gates-first",
+      "note": "heads:null with a well-formed container and the empty-set root: the schema-required gate fires FIRST, so the alarm is anchor_payload — never anchor_root via the empty-set root (ADR-0024). Fixture events sealed with the vector-verified SealEvent; the pinned content is this expected outcome, not the fixture hashes",
+      "events": [
+        {
+          "seq": 1,
+          "run_id": "run_a",
+          "event_id": "a512646f16dfee3b5e5bb98207b0f9920bfb43959e1cbc609321f0167935bb5e",
+          "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "ts": 1751796001,
+          "mono": 1,
+          "principal": "owner",
+          "type": "t.step",
+          "type_version": 1,
+          "payload": { "i": 0 },
+          "blobs": [],
+          "sig": null
+        },
+        {
+          "seq": 2,
+          "run_id": "",
+          "event_id": "ee4ecf2584aacb29f5b2da626aa8ffe7d73ef37961f30318b542b630e36a4547",
+          "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "ts": 1751796002,
+          "mono": 2,
+          "principal": "service:kernel",
+          "type": "anchor.appended",
+          "type_version": 1,
+          "payload": {
+            "container": {
+              "base_seq": 1,
+              "first_event_id": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "heads": null,
+            "merkle_root": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "blobs": [],
+          "sig": null
+        }
+      ],
+      "expected": {
+        "alarms": [
+          { "code": "ANCHOR_MISMATCH", "run_id": "", "seq": 2, "detail": "anchor_payload" }
+        ]
+      }
+    },
+    {
+      "name": "tampered-head-one-alarm",
+      "note": "a validly sealed anchor whose merkle_root does not recompute from the verifier's own heads: exactly one anchor_root alarm with expected (derived) and got (claimed) roots; the post-anchor run_a event still threads — the anchor is impeached, not the chain (ADR-0024; errors.md ANCHOR_MISMATCH)",
+      "events": [
+        {
+          "seq": 1,
+          "run_id": "run_a",
+          "event_id": "a512646f16dfee3b5e5bb98207b0f9920bfb43959e1cbc609321f0167935bb5e",
+          "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "ts": 1751796001,
+          "mono": 1,
+          "principal": "owner",
+          "type": "t.step",
+          "type_version": 1,
+          "payload": { "i": 0 },
+          "blobs": [],
+          "sig": null
+        },
+        {
+          "seq": 2,
+          "run_id": "run_a",
+          "event_id": "4ee4661b703162a13d4c7c22be8103f2773fb324690125707e37314901b00576",
+          "prev_hash": "a512646f16dfee3b5e5bb98207b0f9920bfb43959e1cbc609321f0167935bb5e",
+          "ts": 1751796002,
+          "mono": 2,
+          "principal": "owner",
+          "type": "t.step",
+          "type_version": 1,
+          "payload": { "i": 1 },
+          "blobs": [],
+          "sig": null
+        },
+        {
+          "seq": 3,
+          "run_id": "",
+          "event_id": "3bbcb6a932e1b6314e84a22a53e566eb7e69e26f15307e1c539b11056ac682e9",
+          "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "ts": 1751796003,
+          "mono": 3,
+          "principal": "service:kernel",
+          "type": "anchor.appended",
+          "type_version": 1,
+          "payload": {
+            "container": {
+              "base_seq": 1,
+              "first_event_id": "a512646f16dfee3b5e5bb98207b0f9920bfb43959e1cbc609321f0167935bb5e"
+            },
+            "heads": {
+              "run_a": "4ee4661b703162a13d4c7c22be8103f2773fb324690125707e37314901b00576"
+            },
+            "merkle_root": "0afbfe223a0ea24b4573fd704a6926469f5593a1af6637c25e2eb3f40a0c215b"
+          },
+          "blobs": [],
+          "sig": null
+        },
+        {
+          "seq": 4,
+          "run_id": "run_a",
+          "event_id": "e1e34ddd3093dd1f769f9498cd487d88651cead570bb0193e5357d49674cf463",
+          "prev_hash": "4ee4661b703162a13d4c7c22be8103f2773fb324690125707e37314901b00576",
+          "ts": 1751796004,
+          "mono": 4,
+          "principal": "owner",
+          "type": "t.step",
+          "type_version": 1,
+          "payload": { "i": 2 },
+          "blobs": [],
+          "sig": null
+        }
+      ],
+      "expected": {
+        "alarms": [
+          {
+            "code": "ANCHOR_MISMATCH",
+            "run_id": "",
+            "seq": 3,
+            "detail": "anchor_root",
+            "expected_root": "8afbfe223a0ea24b4573fd704a6926469f5593a1af6637c25e2eb3f40a0c215b",
+            "got_root": "0afbfe223a0ea24b4573fd704a6926469f5593a1af6637c25e2eb3f40a0c215b"
+          }
+        ]
+      }
+    },
+    {
+      "name": "wrong-base-one-alarm",
+      "note": "correct root, base_seq claims 2 where the observed base is seq 1: exactly one anchor_base alarm carrying the full expected/got attestation (both seq and first_event_id ride the alarm whenever either mismatches); broken stays empty",
+      "events": [
+        {
+          "seq": 1,
+          "run_id": "run_a",
+          "event_id": "a512646f16dfee3b5e5bb98207b0f9920bfb43959e1cbc609321f0167935bb5e",
+          "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "ts": 1751796001,
+          "mono": 1,
+          "principal": "owner",
+          "type": "t.step",
+          "type_version": 1,
+          "payload": { "i": 0 },
+          "blobs": [],
+          "sig": null
+        },
+        {
+          "seq": 2,
+          "run_id": "run_a",
+          "event_id": "4ee4661b703162a13d4c7c22be8103f2773fb324690125707e37314901b00576",
+          "prev_hash": "a512646f16dfee3b5e5bb98207b0f9920bfb43959e1cbc609321f0167935bb5e",
+          "ts": 1751796002,
+          "mono": 2,
+          "principal": "owner",
+          "type": "t.step",
+          "type_version": 1,
+          "payload": { "i": 1 },
+          "blobs": [],
+          "sig": null
+        },
+        {
+          "seq": 3,
+          "run_id": "",
+          "event_id": "0fcd6ab6c1a361411e019699648cb163321d5419f7c12d9d06404506d7ba6ade",
+          "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "ts": 1751796003,
+          "mono": 3,
+          "principal": "service:kernel",
+          "type": "anchor.appended",
+          "type_version": 1,
+          "payload": {
+            "container": {
+              "base_seq": 2,
+              "first_event_id": "a512646f16dfee3b5e5bb98207b0f9920bfb43959e1cbc609321f0167935bb5e"
+            },
+            "heads": {
+              "run_a": "4ee4661b703162a13d4c7c22be8103f2773fb324690125707e37314901b00576"
+            },
+            "merkle_root": "8afbfe223a0ea24b4573fd704a6926469f5593a1af6637c25e2eb3f40a0c215b"
+          },
+          "blobs": [],
+          "sig": null
+        }
+      ],
+      "expected": {
+        "alarms": [
+          {
+            "code": "ANCHOR_MISMATCH",
+            "run_id": "",
+            "seq": 3,
+            "detail": "anchor_base",
+            "expected_base_seq": 1,
+            "got_base_seq": 2,
+            "expected_first_id": "a512646f16dfee3b5e5bb98207b0f9920bfb43959e1cbc609321f0167935bb5e",
+            "got_first_id": "a512646f16dfee3b5e5bb98207b0f9920bfb43959e1cbc609321f0167935bb5e"
+          }
+        ]
+      }
+    },
+    {
+      "name": "anchor-as-first-event",
+      "note": "the ADR-0024 corollary of the empty-store refusal, now vector-pinned: base is observed AS the anchor itself (owner R1), and no payload can attest the anchor's own event_id (a sha256 fixpoint), so anchor_base always fires. The claimed root is the empty-set root so the root check passes against the verifier's empty heads and the alarm is exactly the base one",
+      "events": [
+        {
+          "seq": 1,
+          "run_id": "",
+          "event_id": "58678208ceee1a515123378a36400c9719cd93074fe38d4ee8b16178181f6f23",
+          "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "ts": 1751796001,
+          "mono": 1,
+          "principal": "service:kernel",
+          "type": "anchor.appended",
+          "type_version": 1,
+          "payload": {
+            "container": {
+              "base_seq": 1,
+              "first_event_id": "2222222222222222222222222222222222222222222222222222222222222222"
+            },
+            "heads": {
+              "run_x": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "merkle_root": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "blobs": [],
+          "sig": null
+        }
+      ],
+      "expected": {
+        "alarms": [
+          {
+            "code": "ANCHOR_MISMATCH",
+            "run_id": "",
+            "seq": 1,
+            "detail": "anchor_base",
+            "expected_base_seq": 1,
+            "got_base_seq": 1,
+            "expected_first_id": "58678208ceee1a515123378a36400c9719cd93074fe38d4ee8b16178181f6f23",
+            "got_first_id": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      }
     }
   ]
 }

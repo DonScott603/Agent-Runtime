@@ -23,7 +23,7 @@
 - ADR-0021 (D21, ACCEPTED): Vault-lite blob format and key hierarchy (AES-256-GCM, DEK/KEK/master)
 - ADR-0022 (D22, ACCEPTED): Durable append: single-file log, WAL-truncate torn tails, per-platform durability
 - ADR-0023 (D23, ACCEPTED): Reducer identity at Stage 1: declared version string, hash-shaped
-- ADR-0024 (D24, PROPOSED): Anchor payload schema and Merkle construction (RFC 6962 MTH, heads-in-payload, ANCHOR_MISMATCH)
+- ADR-0024 (D24, ACCEPTED): Anchor payload schema and Merkle construction (RFC 6962 MTH, heads-in-payload, ANCHOR_MISMATCH)
 
 Note: chat-era labels D18-D20 were renumbered to D16-D18;
 this register is authoritative.

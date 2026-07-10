@@ -3,7 +3,7 @@
 Operational state between sessions. Updated at every session closeout
 (see process.md §8). Prune freely; this file is not frozen.
 
-Snapshot: 2026-07-08, WP-04c closed out.
+Snapshot: 2026-07-10, WP-04c.1 closed out.
 
 ## Completed
 
@@ -210,12 +210,27 @@ Snapshot: 2026-07-08, WP-04c closed out.
           for ext.vendor.custom (the type is no longer unknown to
           this reducer — that is the point of 0.2.0).
 
+  WP-04c.1 interstitial — ADR-0024 flipped ACCEPTED (owner,
+          2026-07-08 acceptance recorded 2026-07-10; goldens verified
+          by four independent derivations including both stated
+          failure values; derived-order implementation accepted as an
+          upgrade over the planned welded comparator) + register line.
+          anchor.json gained a verify_cases group (additive, 246+/0-;
+          owner-authorized ALLOW_FROZEN): four behavioral cases
+          pinning the verifier contract — gate-first on malformed
+          payloads, exactly-one-alarm per fault with structured
+          expected/got fields, broken-stays-empty, heads-keep-
+          advancing, and the anchor-as-first-event corollary (R1
+          as-observed base pinned via the anchor's own event_id in
+          expected_first_id). Fixtures sealed with the
+          vector-verified SealEvent per the owner reading (outcomes
+          are the pinned content, not fixture hashes — stated in
+          _rules and case notes). Harness: runAnchorVectors drives
+          chainverify over each case. Conformance GREEN.
+
 ## In flight
 
-  Nothing. ADR-0024 awaits owner acceptance at implementation review
-  (process.md §6; kernel/log diffs need human review — store.go
-  gained base-tracking + appendLocked extraction, anchor.go is new
-  append-path code).
+  Nothing.
 
 ## Owner action items
 
@@ -237,23 +252,22 @@ Snapshot: 2026-07-08, WP-04c closed out.
   [x] ADR-0023 ACCEPTED (owner, 2026-07-08, WP-05a.1) after
       implementation review confirmed the IdentityHash preimage
       against the independently derived goldens.
-  [ ] ADR-0024 (anchor payload schema + Merkle construction) awaits
-      acceptance at implementation review. Review focus per
-      threat-model O1: kernel/log/store.go (base-tracking,
-      appendLocked extraction), kernel/log/anchor.go (WriteAnchor),
-      kernel/anchor.go (the frozen construction).
+  [x] ADR-0024 ACCEPTED (owner, WP-04c.1) after implementation
+      review. Register now 24/24 ACCEPTED, zero pending. The
+      verifier-behavior ambiguity flagged at WP-04c closeout is
+      cleared: the contract is now vector-pinned
+      (anchor.json verify_cases).
 
 ## Next up
 
-  WP-05b or WP-06a per workplan deps (both unblocked). An
-  interstitial WP-04c.1 should flip ADR-0024 after the owner's
-  implementation review (the 0022/0023 pattern).
+  WP-05b or WP-06a per workplan deps (both unblocked; owner's choice
+  next session).
 
 ## Standing context for a new assistant
 
   Read in order: docs/architecture.md → docs/process.md → this ledger
   → docs/workplan.md. The RFCs are contracts (win on conflict);
   threat-model.md is the security tiebreaker; ADR register is
-  docs/adr/README.md (D1–D23, all ACCEPTED, zero pending).
+  docs/adr/README.md (D1–D24, all ACCEPTED, zero pending).
   The owner's review method is process.md §6; the golden-file rituals
   §5 are the most load-bearing habits — hold them.

@@ -18,6 +18,7 @@ import (
 
 	"github.com/DonScott603/Agent-Runtime/kernel"
 	klog "github.com/DonScott603/Agent-Runtime/kernel/log"
+	"github.com/DonScott603/Agent-Runtime/plugins/chainverify"
 	"github.com/DonScott603/Agent-Runtime/vault"
 )
 
@@ -209,10 +210,40 @@ type anchorPayloadCase struct {
 	SHA256    string               `json:"sha256"`
 }
 
+// anchorAlarm mirrors chainverify's alarm shape: expected alarms in
+// verify_cases carry every non-zero field, so exact struct equality
+// is the assertion.
+type anchorAlarm struct {
+	Code            string      `json:"code"`
+	RunID           string      `json:"run_id"`
+	Seq             kernel.Seq  `json:"seq"`
+	Detail          string      `json:"detail"`
+	ExpectedPrev    kernel.Hash `json:"expected_prev"`
+	GotPrev         kernel.Hash `json:"got_prev"`
+	ExpectedID      kernel.Hash `json:"expected_id"`
+	GotID           kernel.Hash `json:"got_id"`
+	ExpectedRoot    kernel.Hash `json:"expected_root"`
+	GotRoot         kernel.Hash `json:"got_root"`
+	ExpectedBaseSeq kernel.Seq  `json:"expected_base_seq"`
+	GotBaseSeq      kernel.Seq  `json:"got_base_seq"`
+	ExpectedFirstID kernel.Hash `json:"expected_first_id"`
+	GotFirstID      kernel.Hash `json:"got_first_id"`
+}
+
+type anchorVerifyCase struct {
+	Name     string         `json:"name"`
+	Note     string         `json:"note"`
+	Events   []kernel.Event `json:"events"`
+	Expected struct {
+		Alarms []anchorAlarm `json:"alarms"`
+	} `json:"expected"`
+}
+
 type anchorFile struct {
 	Rules        map[string]string   `json:"_rules"`
 	RootCases    []anchorRootCase    `json:"root_cases"`
 	PayloadCases []anchorPayloadCase `json:"payload_cases"`
+	VerifyCases  []anchorVerifyCase  `json:"verify_cases"`
 }
 
 // runAnchorVectors asserts the anchor Merkle construction and payload
@@ -229,7 +260,7 @@ func runAnchorVectors(t *testing.T, path string) {
 	if err := json.Unmarshal(raw, &f); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
-	if len(f.RootCases) == 0 || len(f.PayloadCases) == 0 {
+	if len(f.RootCases) == 0 || len(f.PayloadCases) == 0 || len(f.VerifyCases) == 0 {
 		t.Fatal("anchor.json has no cases — harness misparse")
 	}
 	for _, tc := range f.RootCases {
@@ -264,6 +295,57 @@ func runAnchorVectors(t *testing.T, path string) {
 				t.Errorf("payload sha256 mismatch\n got: %s\nwant: %s", gotHex, tc.SHA256)
 			}
 		})
+	}
+	for _, tc := range f.VerifyCases {
+		t.Run(tc.Name, func(t *testing.T) { assertAnchorVerifyCase(t, tc) })
+	}
+}
+
+// assertAnchorVerifyCase drives the chain-verify reducer over the
+// case's events and asserts the verifier contract per the _rules:
+// the alarm list exactly, broken empty (anchor alarms freeze
+// nothing), and every run's held head at its last event.
+func assertAnchorVerifyCase(t *testing.T, tc anchorVerifyCase) {
+	t.Helper()
+	if len(tc.Events) == 0 {
+		t.Fatal("verify case has no events — harness misparse")
+	}
+	r := chainverify.New()
+	state := r.Init()
+	for _, e := range tc.Events {
+		next, err := r.Apply(state, e)
+		if err != nil {
+			t.Fatalf("Apply seq %d: %v", e.Seq, err)
+		}
+		state = next
+	}
+	var s struct {
+		Alarms []anchorAlarm                `json:"alarms"`
+		Broken map[string]bool              `json:"broken"`
+		Heads  map[kernel.RunID]kernel.Hash `json:"heads"`
+	}
+	if err := json.Unmarshal(state, &s); err != nil {
+		t.Fatalf("state does not parse: %v", err)
+	}
+	if len(s.Alarms) != len(tc.Expected.Alarms) {
+		t.Fatalf("%d alarms, want %d: %+v", len(s.Alarms), len(tc.Expected.Alarms), s.Alarms)
+	}
+	for i, want := range tc.Expected.Alarms {
+		if s.Alarms[i] != want {
+			t.Errorf("alarm %d mismatch\n got: %+v\nwant: %+v", i, s.Alarms[i], want)
+		}
+	}
+	if len(s.Broken) != 0 {
+		t.Errorf("broken is not empty — anchor alarms must freeze nothing: %v", s.Broken)
+	}
+	lastByRun := map[kernel.RunID]kernel.Hash{}
+	for _, e := range tc.Events {
+		lastByRun[e.RunID] = e.EventID
+	}
+	for run, want := range lastByRun {
+		if s.Heads[run] != want {
+			t.Errorf("heads[%q] = %s, want the run's last event %s (heads keep advancing)", run, s.Heads[run], want)
+		}
 	}
 }
 
